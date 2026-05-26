@@ -70,6 +70,8 @@ const els = {
   filenameRules: document.querySelector("#filenameRules"),
   openaiApiKey: document.querySelector("#openaiApiKey"),
   openaiModel: document.querySelector("#openaiModel"),
+  exportSchemeTemplate: document.querySelector("#exportSchemeTemplate"),
+  importSchemeTemplate: document.querySelector("#importSchemeTemplate"),
   prefixPreview: document.querySelector("#prefixPreview"),
   saveRules: document.querySelector("#saveRules"),
   saveAsScheme: document.querySelector("#saveAsScheme"),
@@ -198,6 +200,9 @@ function bindRules() {
       saveAiSettings(aiSettings);
     });
   });
+
+  els.exportSchemeTemplate.addEventListener("click", exportSchemeTemplate);
+  els.importSchemeTemplate.addEventListener("change", importSchemeTemplate);
 }
 
 function bindUploads() {
@@ -784,6 +789,120 @@ function fillRulesForm() {
 function fillAiSettings() {
   els.openaiApiKey.value = aiSettings.apiKey;
   els.openaiModel.value = aiSettings.model;
+}
+
+function exportSchemeTemplate() {
+  const current = collectRulesForm();
+  const rows = [
+    ["模块", "字段", "值"],
+    ["基础配置", "方案名称", current.schemeName],
+    ["基础配置", "固定前缀", current.basePrefix],
+    ["基础配置", "工程名", current.projectName],
+    ["基础配置", "分隔符", current.separator],
+    ["基础配置", "常用标签", current.tags],
+    ...parseList(current.pageTerms).map((value) => ["页面词库", "页面名", value]),
+    ...parseList(current.componentTerms).map((value) => ["组件词库", "组件名", value]),
+    ...parseList(current.stateTerms).map((value) => ["状态词库", "状态名", value]),
+    ...parseFilenameRules(current.filenameRules).map((rule) => ["文件名匹配规则", rule.keyword, rule.value]),
+  ];
+  const csv = "\ufeff" + rows.map((row) => row.map(csvCell).join(",")).join("\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = sanitizeName(current.schemeName) + "_命名方案模板.csv";
+  link.click();
+  URL.revokeObjectURL(url);
+  showToast("已导出当前方案模板");
+}
+
+async function importSchemeTemplate(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  try {
+    const text = await file.text();
+    const imported = parseSchemeTemplateCsv(text);
+    rules = normalizeLoadedRules({ ...defaultRules, ...imported });
+    saveRules(rules);
+    upsertScheme(rules);
+    fillRulesForm();
+    renderSchemeSelect();
+    updateRulePreview();
+    updateActiveRuleText();
+    renderAssetList();
+    showToast("已导入方案模板：" + rules.schemeName);
+  } catch (error) {
+    showToast("导入失败，请检查 CSV 模板格式");
+  } finally {
+    event.target.value = "";
+  }
+}
+
+function parseSchemeTemplateCsv(text) {
+  const rows = parseCsv(text.replace(/^\ufeff/, ""));
+  const next = { ...defaultRules };
+  const pageTerms = [];
+  const componentTerms = [];
+  const stateTerms = [];
+  const filenameRules = [];
+  rows.slice(1).forEach(([moduleName, field, value]) => {
+    const cleanModule = String(moduleName || "").trim();
+    const cleanField = String(field || "").trim();
+    const cleanValue = String(value || "").trim();
+    if (!cleanModule || !cleanField) return;
+    if (cleanModule === "基础配置") {
+      if (cleanField === "方案名称") next.schemeName = cleanValue || defaultRules.schemeName;
+      if (cleanField === "固定前缀") next.basePrefix = cleanValue || defaultRules.basePrefix;
+      if (cleanField === "工程名") next.projectName = cleanValue || defaultRules.projectName;
+      if (cleanField === "分隔符") next.separator = cleanValue || defaultRules.separator;
+      if (cleanField === "常用标签") next.tags = cleanValue || defaultRules.tags;
+    }
+    if (cleanModule === "页面词库" && cleanValue) pageTerms.push(cleanValue);
+    if (cleanModule === "组件词库" && cleanValue) componentTerms.push(cleanValue);
+    if (cleanModule === "状态词库" && cleanValue) stateTerms.push(cleanValue);
+    if (cleanModule === "文件名匹配规则" && cleanField && cleanValue) filenameRules.push(cleanField + "=" + cleanValue);
+  });
+  if (pageTerms.length) next.pageTerms = pageTerms.join("\n");
+  if (componentTerms.length) next.componentTerms = componentTerms.join("\n");
+  if (stateTerms.length) next.stateTerms = stateTerms.join("\n");
+  if (filenameRules.length) next.filenameRules = filenameRules.join("\n");
+  return next;
+}
+
+function parseCsv(text) {
+  const rows = [];
+  let row = [];
+  let cell = "";
+  let quoted = false;
+  for (let index = 0; index < text.length; index += 1) {
+    const char = text[index];
+    const next = text[index + 1];
+    if (quoted && char === '"' && next === '"') {
+      cell += '"';
+      index += 1;
+    } else if (char === '"') {
+      quoted = !quoted;
+    } else if (!quoted && char === ",") {
+      row.push(cell);
+      cell = "";
+    } else if (!quoted && (char === "\n" || char === "\r")) {
+      if (char === "\r" && next === "\n") index += 1;
+      row.push(cell);
+      if (row.some((item) => item.trim())) rows.push(row);
+      row = [];
+      cell = "";
+    } else {
+      cell += char;
+    }
+  }
+  row.push(cell);
+  if (row.some((item) => item.trim())) rows.push(row);
+  return rows;
+}
+
+function csvCell(value) {
+  const text = String(value || "");
+  return '"' + text.replace(/"/g, '""') + '"';
 }
 
 function renderSchemeSelect() {

@@ -326,6 +326,30 @@ select:focus {
   gap: 16px;
 }
 
+.template-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.file-action {
+  display: inline-grid;
+  min-height: 42px;
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 0 16px;
+  background: var(--surface);
+  color: var(--text);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.file-action input {
+  display: none;
+}
+
 button:disabled {
   cursor: progress;
   opacity: 0.72;
