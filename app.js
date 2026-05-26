@@ -45,6 +45,8 @@ let aiSettings = loadAiSettings();
 let assets = [];
 let selectedId = null;
 let referenceFile = null;
+let namingController = null;
+let stopRequested = false;
 let toastTimer = null;
 
 const els = {
@@ -90,6 +92,7 @@ const els = {
   assetList: document.querySelector("#assetList"),
   fileCount: document.querySelector("#fileCount"),
   runNaming: document.querySelector("#runNaming"),
+  stopNaming: document.querySelector("#stopNaming"),
   exportFiles: document.querySelector("#exportFiles"),
   batchSuffix: document.querySelector("#batchSuffix"),
   applySuffix: document.querySelector("#applySuffix"),
@@ -231,50 +234,90 @@ function bindUploads() {
 
 function bindEditor() {
   els.runNaming.addEventListener("click", runNaming);
+  els.stopNaming.addEventListener("click", stopNaming);
   els.applySuffix.addEventListener("click", applyBatchSuffix);
   els.removeSelected.addEventListener("click", removeSelectedAssets);
   els.exportFiles.addEventListener("click", exportRenamedFiles);
 }
 
 async function runNaming() {
-    if (!assets.length) {
-      showToast("请先上传切图文件");
-      return;
-    }
-    const apiKey = aiSettings.apiKey.trim();
-    setRunButtonLoading(true, "AI 命名中 0/" + assets.length);
-    for (let index = 0; index < assets.length; index += 1) {
-      const asset = assets[index];
-      const localRecommendations = makeRecommendations(asset);
-      let recommendations = localRecommendations;
+  if (!assets.length) {
+    showToast("请先上传切图文件");
+    return;
+  }
+  const apiKey = aiSettings.apiKey.trim();
+  stopRequested = false;
+  assets.forEach((asset) => {
+    asset.namingStatus = "pending";
+    asset.statusMessage = "";
+  });
+  setRunButtonLoading(true, "AI 命名中 0/" + assets.length);
+  renderAssetList();
+
+  for (let index = 0; index < assets.length; index += 1) {
+    if (stopRequested) break;
+    const asset = assets[index];
+    const localRecommendations = makeRecommendations(asset);
+    let recommendations = localRecommendations;
+    asset.namingStatus = "running";
+    asset.statusMessage = "正在处理第 " + (index + 1) + " 张";
+    setRunButtonLoading(true, "AI 命名中 " + index + "/" + assets.length);
+    renderAssetList();
+
+    try {
       if (apiKey) {
-        try {
-          recommendations = await requestAiRecommendations(asset, localRecommendations);
-        } catch (error) {
-          recommendations = localRecommendations;
-        }
+        namingController = new AbortController();
+        recommendations = await requestAiRecommendations(asset, localRecommendations, namingController.signal);
       }
       asset.recommendations = recommendations.length ? recommendations : localRecommendations;
       asset.finalBaseName = asset.finalBaseName || asset.recommendations[0];
-      setRunButtonLoading(true, "AI 命名中 " + (index + 1) + "/" + assets.length);
-      renderAssetList();
+      asset.namingStatus = "done";
+      asset.statusMessage = apiKey ? "AI 命名完成" : "本地规则完成";
+    } catch (error) {
+      if (stopRequested || error.name === "AbortError") {
+        asset.namingStatus = "pending";
+        asset.statusMessage = "已终止，未完成命名";
+        break;
+      }
+      asset.recommendations = localRecommendations;
+      asset.finalBaseName = asset.finalBaseName || localRecommendations[0];
+      asset.namingStatus = "failed";
+      asset.statusMessage = "AI 失败，已使用本地推荐";
     }
-    setRunButtonLoading(false);
-    showToast(apiKey ? "AI 推荐命名已完成" : "已使用本地知识库生成推荐名称");
+    setRunButtonLoading(true, "AI 命名中 " + (index + 1) + "/" + assets.length);
+    renderAssetList();
+  }
+
+  namingController = null;
+  setRunButtonLoading(false);
+  renderAssetList();
+  showToast(stopRequested ? "已终止命名" : apiKey ? "AI 推荐命名已完成" : "已使用本地知识库生成推荐名称");
 }
 
 function setRunButtonLoading(isLoading, label = "运行 AI 命名") {
   els.runNaming.disabled = isLoading;
   els.runNaming.textContent = label;
+  els.stopNaming.disabled = false;
+  els.stopNaming.textContent = "终止命名";
+  els.stopNaming.classList.toggle("hidden", !isLoading);
 }
 
-async function requestAiRecommendations(asset, localRecommendations) {
+function stopNaming() {
+  stopRequested = true;
+  if (namingController) namingController.abort();
+  els.stopNaming.disabled = true;
+  els.stopNaming.textContent = "终止中";
+  showToast("正在终止命名");
+}
+
+async function requestAiRecommendations(asset, localRecommendations, signal) {
   const cutImageUrl = await imageFileToDataUrl(asset.file, 768);
   const referenceImageUrl = referenceFile && isRasterImage(referenceFile) ? await imageFileToDataUrl(referenceFile, 960) : "";
   const prompt = buildAiPrompt(asset, localRecommendations);
   const apiFormat = aiSettings.apiFormat || "responses";
   const response = await fetch(buildAiEndpoint(apiFormat), {
     method: "POST",
+    signal,
     headers: {
       "Content-Type": "application/json",
       Authorization: "Bearer " + aiSettings.apiKey.trim(),
@@ -521,6 +564,8 @@ async function fileToAsset(file) {
     checked: false,
     recommendations: [],
     finalBaseName: "",
+    namingStatus: "idle",
+    statusMessage: "",
   };
 }
 
@@ -570,7 +615,12 @@ function renderAssetList() {
     title.textContent = asset.originalBase;
     const subtitle = document.createElement("span");
     subtitle.textContent = asset.finalBaseName ? buildExportName(asset) : "待命名";
-    text.append(title, subtitle);
+    const status = document.createElement("span");
+    status.className = "status-badge status-" + getAssetStatus(asset);
+    status.textContent = getAssetStatusText(asset);
+    const statusHint = document.createElement("em");
+    statusHint.textContent = asset.statusMessage || "";
+    text.append(title, subtitle, status, statusHint);
 
     const editor = document.createElement("div");
     editor.className = "inline-editor";
@@ -623,6 +673,22 @@ function renderAssetList() {
     row.append(checkbox, img, text, editor);
     els.assetList.appendChild(row);
   });
+}
+
+function getAssetStatus(asset) {
+  if (asset.namingStatus && asset.namingStatus !== "idle") return asset.namingStatus;
+  return asset.finalBaseName ? "done" : "pending";
+}
+
+function getAssetStatusText(asset) {
+  const status = getAssetStatus(asset);
+  const labels = {
+    pending: "待命名",
+    running: "命名中",
+    done: "已完成",
+    failed: "失败",
+  };
+  return labels[status] || "待命名";
 }
 
 function makeRecommendations(asset) {

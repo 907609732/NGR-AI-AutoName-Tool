@@ -562,6 +562,54 @@ button:disabled {
   font-size: 12px;
 }
 
+.asset-meta em {
+  display: block;
+  min-height: 18px;
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 12px;
+  font-style: normal;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.status-badge {
+  display: inline-grid !important;
+  width: fit-content;
+  min-height: 24px;
+  align-items: center;
+  margin-top: 10px !important;
+  padding: 0 9px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  font-size: 12px !important;
+  font-weight: 750;
+}
+
+.status-pending {
+  background: #f2f5f6;
+  color: #596a72 !important;
+}
+
+.status-running {
+  background: #fff7df;
+  border-color: #ead28b;
+  color: #8a6110 !important;
+}
+
+.status-done {
+  background: #eaf7ef;
+  border-color: #b9e2c7;
+  color: #28734c !important;
+}
+
+.status-failed {
+  background: #fff1ef;
+  border-color: #efb7ae;
+  color: var(--danger) !important;
+}
+
 .editor-panel {
   padding: 22px;
 }
