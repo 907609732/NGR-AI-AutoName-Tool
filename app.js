@@ -412,6 +412,13 @@ function applyProviderPreset() {
   if (provider === "compatible") {
     els.aiApiFormat.value = "chat";
     if (!els.aiBaseUrl.value.trim() || els.aiBaseUrl.value.includes("api.openai.com")) els.aiBaseUrl.value = "https://你的模型服务地址/v1";
+    return;
+  }
+  if (provider === "kimi") {
+    els.aiBaseUrl.value = "https://api.moonshot.cn/v1";
+    els.aiApiFormat.value = "chat";
+    els.openaiModel.value = "moonshot-v1-8k-vision-preview";
+    els.aiProviderNote.value = "Kimi / Moonshot 视觉模型";
   }
 }
 
