@@ -778,22 +778,22 @@ button:disabled {
 }
 
 .asset-item {
-  grid-template-columns: 24px 112px minmax(250px, 1fr) minmax(360px, 1.55fr);
+  grid-template-columns: 24px 150px minmax(260px, 1fr) minmax(400px, 1.45fr);
   align-items: start;
   gap: 16px;
-  min-height: 174px;
+  min-height: 212px;
   padding: 14px;
   cursor: default;
 }
 
 .asset-item input[type="checkbox"] {
   height: 18px;
-  margin-top: 46px;
+  margin-top: 66px;
 }
 
 .asset-item img {
-  width: 112px;
-  height: 112px;
+  width: 150px;
+  height: 150px;
 }
 
 .asset-meta {
@@ -840,6 +840,11 @@ button:disabled {
   padding: 9px 10px;
   border-radius: 8px;
   background: var(--surface-2);
+}
+
+.inline-prefix input {
+  height: 34px;
+  min-width: 0;
 }
 
 .inline-prefix span,

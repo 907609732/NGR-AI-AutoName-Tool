@@ -36,11 +36,11 @@
 
           <form id="rulesForm" class="rules-grid">
             <label class="wide">
-              <span>选择方案</span>
+              <span>选择项目配置</span>
               <select id="schemeSelect"></select>
             </label>
             <label>
-              <span>方案名称</span>
+              <span>项目配置名称</span>
               <input id="schemeName" type="text" placeholder="例如：默认方案" />
             </label>
             <label>
@@ -96,6 +96,13 @@
                   <button class="help-button" type="button" aria-label="文件名匹配规则说明" data-tooltip="按“关键词=英文名”填写，例如 登录=Login、按钮=Button。原始中文文件名命中关键词后，会自动翻译成英文命名。">?</button>
                 </span>
                 <textarea id="filenameRules" rows="4" placeholder="首页=Home&#10;登录=Login&#10;按钮=Button&#10;悬浮=Hover"></textarea>
+              </label>
+              <label class="wide">
+                <span class="label-with-help">
+                  项目上下文文档
+                  <button class="help-button" type="button" aria-label="项目上下文文档说明" data-tooltip="填写项目背景、页面结构、组件约定、特殊命名说明。AI 命名时会把这里作为上下文参考，不同项目互不干扰。">?</button>
+                </span>
+                <textarea id="contextDocs" rows="6" placeholder="例如：本项目为游戏商城 UI，Shop 表示商城页，Inventory 表示背包页，Popup 表示弹窗，CTA 表示主按钮。"></textarea>
               </label>
             </div>
           </div>
@@ -166,7 +173,7 @@
 
           <div class="action-row">
             <button id="saveRules" class="primary-action" type="button">保存规则</button>
-            <button id="saveAsScheme" class="ghost-action" type="button">保存为方案</button>
+            <button id="saveAsScheme" class="ghost-action" type="button">保存为项目配置</button>
             <button id="resetRules" class="ghost-action" type="button">恢复默认</button>
           </div>
         </section>
@@ -185,6 +192,10 @@
           </div>
 
           <div class="job-config">
+            <label>
+              <span>当前项目配置</span>
+              <select id="workSchemeSelect"></select>
+            </label>
             <label>
               <span>当前界面工程名</span>
               <input id="workProjectName" type="text" placeholder="请输入本套界面的工程名" />

@@ -13,6 +13,7 @@ const defaultRules = {
   componentTerms: "BG\nButton\nIcon\nBanner\nNav\nModule",
   stateTerms: "Normal\nHover\nActive\nDisabled",
   filenameRules: "首页=Home\n主页=Home\n登录=Login\n登陆=Login\n个人中心=Profile\n我的=Profile\n设置=Settings\n背景=BG\n底图=BG\n按钮=Button\n图标=Icon\n导航=Nav\n横幅=Banner\n模块=Module\n常态=Normal\n默认=Normal\n悬浮=Hover\n选中=Active\n点击=Active\n禁用=Disabled\n不可用=Disabled\nbg=BG\nbackground=BG\nbtn=Button\nbutton=Button\nicon=Icon\nhover=Hover\nactive=Active\ndisabled=Disabled\nhome=Home\nlogin=Login\nuser=Profile",
+  contextDocs: "",
 };
 
 const builtinTranslations = {
@@ -60,6 +61,7 @@ const els = {
   rulesEntry: document.querySelector("#rulesEntry"),
   workEntry: document.querySelector("#workEntry"),
   schemeSelect: document.querySelector("#schemeSelect"),
+  workSchemeSelect: document.querySelector("#workSchemeSelect"),
   schemeName: document.querySelector("#schemeName"),
   basePrefix: document.querySelector("#basePrefix"),
   projectName: document.querySelector("#projectName"),
@@ -70,6 +72,7 @@ const els = {
   componentTerms: document.querySelector("#componentTerms"),
   stateTerms: document.querySelector("#stateTerms"),
   filenameRules: document.querySelector("#filenameRules"),
+  contextDocs: document.querySelector("#contextDocs"),
   aiProvider: document.querySelector("#aiProvider"),
   aiApiFormat: document.querySelector("#aiApiFormat"),
   aiBaseUrl: document.querySelector("#aiBaseUrl"),
@@ -133,7 +136,7 @@ function showView(name) {
 }
 
 function bindRules() {
-  [els.schemeName, els.basePrefix, els.projectName, els.separator, els.tags, els.pageTerms, els.componentTerms, els.stateTerms, els.filenameRules].forEach((input) => {
+  [els.schemeName, els.basePrefix, els.projectName, els.separator, els.tags, els.pageTerms, els.componentTerms, els.stateTerms, els.filenameRules, els.contextDocs].forEach((input) => {
     input.addEventListener("input", () => {
       rules = collectRulesForm();
       if (input === els.projectName) els.workProjectName.value = rules.projectName;
@@ -144,16 +147,11 @@ function bindRules() {
   });
 
   els.schemeSelect.addEventListener("change", () => {
-    const selected = schemes.find((scheme) => scheme.schemeName === els.schemeSelect.value);
-    if (!selected) return;
-    rules = normalizeLoadedRules({ ...defaultRules, ...selected });
-    saveRules(rules);
-    fillRulesForm();
-    renderSchemeSelect();
-    updateRulePreview();
-    updateActiveRuleText();
-    renderAssetList();
-    showToast("已切换命名方案");
+    switchScheme(els.schemeSelect.value);
+  });
+
+  els.workSchemeSelect.addEventListener("change", () => {
+    switchScheme(els.workSchemeSelect.value);
   });
 
   els.workProjectName.addEventListener("input", () => {
@@ -216,6 +214,19 @@ function bindRules() {
 
   els.exportSchemeTemplate.addEventListener("click", exportSchemeTemplate);
   els.importSchemeTemplate.addEventListener("change", importSchemeTemplate);
+}
+
+function switchScheme(schemeName) {
+  const selected = schemes.find((scheme) => scheme.schemeName === schemeName);
+  if (!selected) return;
+  rules = normalizeLoadedRules({ ...defaultRules, ...selected });
+  saveRules(rules);
+  fillRulesForm();
+  renderSchemeSelect();
+  updateRulePreview();
+  updateActiveRuleText();
+  renderAssetList();
+  showToast("已切换项目配置");
 }
 
 function bindUploads() {
@@ -428,12 +439,13 @@ function buildAiPrompt(asset, localRecommendations) {
     "只返回 JSON，格式为：{\"names\":[\"Login_Button_Hover\",\"Home_BG\"]}。",
     "不要包含固定前缀、工程名、文件扩展名。名称只允许英文字母、数字和下划线，使用 Pascal/Title 英文词组并以下划线连接。",
     "原始文件名：" + asset.originalBase + asset.extension,
-    "当前前缀：" + buildPrefix(),
+    "当前前缀：" + buildAssetPrefix(asset),
     "本地候选：" + localRecommendations.join(", "),
     "页面词库：" + parseList(rules.pageTerms).join(", "),
     "组件词库：" + parseList(rules.componentTerms).join(", "),
     "状态词库：" + parseList(rules.stateTerms).join(", "),
     "文件名匹配规则：" + parseFilenameRules(rules.filenameRules).map((rule) => rule.keyword + "=" + rule.value).join(", "),
+    "项目上下文文档：" + (rules.contextDocs || "无"),
   ].join("\n");
 }
 
@@ -571,6 +583,7 @@ async function fileToAsset(file) {
     checked: false,
     recommendations: [],
     finalBaseName: "",
+    customPrefix: "",
     namingStatus: "idle",
     statusMessage: "",
   };
@@ -632,13 +645,19 @@ function renderAssetList() {
     editor.className = "inline-editor";
     editor.addEventListener("click", (event) => event.stopPropagation());
 
-    const prefix = document.createElement("div");
+    const prefix = document.createElement("label");
     prefix.className = "inline-prefix";
     const prefixLabel = document.createElement("span");
-    prefixLabel.textContent = "已选前缀";
-    const prefixValue = document.createElement("strong");
-    prefixValue.textContent = buildPrefix();
-    prefix.append(prefixLabel, prefixValue);
+    prefixLabel.textContent = "单张前缀";
+    const prefixInput = document.createElement("input");
+    prefixInput.type = "text";
+    prefixInput.value = buildAssetPrefix(asset);
+    prefixInput.placeholder = buildPrefix();
+    prefixInput.addEventListener("input", () => {
+      asset.customPrefix = sanitizePrefix(prefixInput.value);
+      afterName.querySelector("strong").textContent = asset.finalBaseName ? buildExportName(asset) : "待命名";
+    });
+    prefix.append(prefixLabel, prefixInput);
 
     const recommendationWrap = document.createElement("div");
     recommendationWrap.className = "inline-recommendations";
@@ -863,6 +882,14 @@ function sanitizeName(name) {
     .replace(/^_+|_+$/g, "");
 }
 
+function sanitizePrefix(prefix) {
+  return String(prefix || "")
+    .trim()
+    .replace(/[\\/:*?"<>|]/g, "_")
+    .replace(/\s+/g, "_")
+    .replace(/_+/g, "_");
+}
+
 function appendPart(base, part) {
   const cleanBase = sanitizeName(base);
   const cleanPart = sanitizeName(part);
@@ -910,7 +937,11 @@ async function exportRenamedFiles() {
 }
 
 function buildExportName(asset) {
-  return buildPrefix() + sanitizeName(asset.finalBaseName) + asset.extension;
+  return buildAssetPrefix(asset) + sanitizeName(asset.finalBaseName) + asset.extension;
+}
+
+function buildAssetPrefix(asset) {
+  return sanitizePrefix(asset?.customPrefix) || buildPrefix();
 }
 
 function getExtension(name) {
@@ -929,6 +960,7 @@ function collectRulesForm() {
     componentTerms: els.componentTerms.value.trim() || defaultRules.componentTerms,
     stateTerms: els.stateTerms.value.trim() || defaultRules.stateTerms,
     filenameRules: els.filenameRules.value.trim() || defaultRules.filenameRules,
+    contextDocs: els.contextDocs.value.trim(),
   };
 }
 
@@ -943,6 +975,7 @@ function fillRulesForm() {
   els.componentTerms.value = rules.componentTerms;
   els.stateTerms.value = rules.stateTerms;
   els.filenameRules.value = rules.filenameRules;
+  els.contextDocs.value = rules.contextDocs || "";
 }
 
 function fillAiSettings() {
@@ -1003,6 +1036,7 @@ function buildExcelTemplate(current) {
         ["基础配置页：维护方案名称、固定前缀、工程名、分隔符、常用标签。"],
         ["页面词库/组件词库/状态词库：每行填写一个英文命名词。"],
         ["文件名匹配规则：第一列填写中文或英文关键词，第二列填写转换后的英文名。"],
+        ["上下文文档：填写项目背景、页面结构和特殊命名约定，AI 会参考这些内容。"],
         ["不要修改页签名称和表头，否则可能无法导入。"],
       ],
     },
@@ -1032,6 +1066,10 @@ function buildExcelTemplate(current) {
     {
       name: "文件名匹配规则",
       rows: [["原始文件名关键词", "转换后的英文名", "说明"], ...ruleRows],
+    },
+    {
+      name: "上下文文档",
+      rows: [["项目上下文文档", current.contextDocs || ""]],
     },
   ];
   return [
@@ -1070,6 +1108,7 @@ function parseSchemeTemplateWorkbook(text) {
   const componentTerms = readWorksheetValues(xml, "组件词库", 1);
   const stateTerms = readWorksheetValues(xml, "状态词库", 1);
   const rulesRows = readWorksheetRows(xml, "文件名匹配规则").slice(1);
+  const contextRows = readWorksheetRows(xml, "上下文文档").slice(1);
   const baseRows = readWorksheetRows(xml, "基础配置").slice(1);
   baseRows.forEach(([field, value]) => {
     const cleanField = String(field || "").trim();
@@ -1088,6 +1127,8 @@ function parseSchemeTemplateWorkbook(text) {
     .filter(([keyword, value]) => keyword && value)
     .map(([keyword, value]) => keyword + "=" + value);
   if (filenameRules.length) next.filenameRules = filenameRules.join("\n");
+  const contextDocs = contextRows.map((row) => row.filter(Boolean).join("\n")).filter(Boolean).join("\n");
+  if (contextDocs) next.contextDocs = contextDocs;
   return next;
 }
 
@@ -1130,6 +1171,7 @@ function parseSchemeTemplateCsv(text) {
     if (cleanModule === "组件词库" && cleanValue) componentTerms.push(cleanValue);
     if (cleanModule === "状态词库" && cleanValue) stateTerms.push(cleanValue);
     if (cleanModule === "文件名匹配规则" && cleanField && cleanValue) filenameRules.push(cleanField + "=" + cleanValue);
+    if (cleanModule === "上下文文档" && cleanValue) next.contextDocs = [next.contextDocs, cleanValue].filter(Boolean).join("\n");
   });
   if (pageTerms.length) next.pageTerms = pageTerms.join("\n");
   if (componentTerms.length) next.componentTerms = componentTerms.join("\n");
@@ -1184,12 +1226,15 @@ function xmlEscape(value) {
 
 function renderSchemeSelect() {
   els.schemeSelect.innerHTML = "";
+  els.workSchemeSelect.innerHTML = "";
   schemes.forEach((scheme) => {
     const option = document.createElement("option");
     option.value = scheme.schemeName;
     option.textContent = scheme.schemeName;
     option.selected = scheme.schemeName === rules.schemeName;
     els.schemeSelect.appendChild(option);
+    const workOption = option.cloneNode(true);
+    els.workSchemeSelect.appendChild(workOption);
   });
 }
 
