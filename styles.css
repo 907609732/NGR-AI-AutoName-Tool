@@ -99,6 +99,32 @@ main {
   gap: 22px;
 }
 
+.signature {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.signature span {
+  font-weight: 750;
+  color: var(--text);
+}
+
+.signature a {
+  color: var(--primary);
+  text-decoration: none;
+  font-weight: 700;
+}
+
+.signature a:hover {
+  text-decoration: underline;
+}
+
 .home-view.active {
   display: grid;
 }

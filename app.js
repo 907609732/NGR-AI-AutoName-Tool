@@ -16,6 +16,26 @@ const defaultRules = {
   contextDocs: "",
 };
 
+const builtinSchemes = [
+  {
+    ...defaultRules,
+    schemeName: "NGR命名规范",
+    contextDocs: "该项目由驼峰命名规则首字母大写。命名应优先使用英文 Pascal Case 词组，并用下划线连接，例如 Home_Button_Normal。",
+  },
+  {
+    ...defaultRules,
+    schemeName: "yysls命名规范",
+    tags: "BG, Button, Hover, Normal, Icon, Module, Pinyin",
+    filenameRules: defaultRules.filenameRules + "\n按钮=AnNiu\n背景=BeiJing\n图标=TuBiao\n首页=ShouYe\n登录=DengLu",
+    contextDocs: "该项目命名规范带中英混合，有拼音命名。遇到团队特殊词可保留拼音或中英混合表达。",
+  },
+  {
+    ...defaultRules,
+    schemeName: "更多项目正在持续开发中",
+    contextDocs: "占位项目配置。后续可以复制或修改为新的项目命名规范。",
+  },
+];
+
 const builtinTranslations = {
   首页: "Home",
   主页: "Home",
@@ -1333,15 +1353,25 @@ function readLocalAiConfig() {
 function loadSchemes() {
   try {
     const saved = JSON.parse(localStorage.getItem(SCHEME_KEY));
-    if (Array.isArray(saved) && saved.length) return saved.map((scheme) => normalizeLoadedRules(scheme));
+    if (Array.isArray(saved) && saved.length) return ensureBuiltinSchemes(saved.map((scheme) => normalizeLoadedRules(scheme)));
   } catch {
     // Ignore invalid local scheme data and rebuild with the default scheme.
   }
-  return [normalizeLoadedRules({ ...defaultRules })];
+  return ensureBuiltinSchemes([normalizeLoadedRules({ ...defaultRules })]);
 }
 
 function saveSchemes(nextSchemes) {
   localStorage.setItem(SCHEME_KEY, JSON.stringify(nextSchemes));
+}
+
+function ensureBuiltinSchemes(nextSchemes) {
+  const merged = [...nextSchemes];
+  builtinSchemes.forEach((scheme) => {
+    if (!merged.some((item) => item.schemeName === scheme.schemeName)) {
+      merged.push(normalizeLoadedRules(scheme));
+    }
+  });
+  return merged;
 }
 
 function upsertScheme(nextRules) {
