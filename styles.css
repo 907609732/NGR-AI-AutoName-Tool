@@ -468,18 +468,30 @@ button:disabled {
 .upload-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 14px;
-  margin-bottom: 18px;
+  gap: 10px;
+  margin-bottom: 14px;
+  padding: 8px;
+  border: 1px dashed transparent;
+  border-radius: 8px;
 }
 
 .upload-panel {
-  min-height: 118px;
-  padding: 18px;
+  min-height: 82px;
+  padding: 12px;
   border: 1px dashed #9fb2ba;
   border-radius: 8px;
   background: var(--surface);
   align-content: center;
   cursor: pointer;
+}
+
+.upload-grid.drag-over {
+  border-color: var(--primary);
+  background: #f4fbfb;
+}
+
+.upload-grid.drag-over .upload-panel {
+  border-color: var(--primary);
 }
 
 .upload-panel:hover {
@@ -489,11 +501,12 @@ button:disabled {
 
 .upload-panel span {
   color: var(--text);
-  font-size: 16px;
+  font-size: 14px;
 }
 
 .upload-panel small {
   color: var(--muted);
+  font-size: 12px;
 }
 
 .upload-panel input {
@@ -501,7 +514,8 @@ button:disabled {
   padding: 0;
   border: 0;
   border-radius: 0;
-  margin-top: 6px;
+  margin-top: 2px;
+  font-size: 12px;
 }
 
 .reference-preview {
@@ -742,7 +756,7 @@ button:disabled {
 
 .batch-tools {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto;
+  grid-template-columns: minmax(180px, 1fr) minmax(180px, 1fr) auto auto;
   gap: 10px;
   align-items: end;
   padding-top: 18px;
@@ -797,7 +811,7 @@ button:disabled {
 /* Inline naming workflow */
 .job-config {
   margin-bottom: 14px;
-  padding: 14px;
+  padding: 12px;
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: 8px;

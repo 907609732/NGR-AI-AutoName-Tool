@@ -88,7 +88,6 @@ const els = {
   rulesEntry: document.querySelector("#rulesEntry"),
   workEntry: document.querySelector("#workEntry"),
   projectSelect: document.querySelector("#projectSelect"),
-  workProjectSelect: document.querySelector("#workProjectSelect"),
   projectConfigName: document.querySelector("#projectConfigName"),
   projectConfigDescription: document.querySelector("#projectConfigDescription"),
   schemeSelect: document.querySelector("#schemeSelect"),
@@ -123,6 +122,7 @@ const els = {
   deleteProject: document.querySelector("#deleteProject"),
   resetRules: document.querySelector("#resetRules"),
   activeRuleText: document.querySelector("#activeRuleText"),
+  uploadDropZone: document.querySelector("#uploadDropZone"),
   folderInput: document.querySelector("#folderInput"),
   singleInput: document.querySelector("#singleInput"),
   referenceInput: document.querySelector("#referenceInput"),
@@ -187,7 +187,6 @@ function bindRules() {
   });
 
   els.projectSelect.addEventListener("change", () => switchProject(els.projectSelect.value));
-  els.workProjectSelect.addEventListener("change", () => switchProject(els.workProjectSelect.value));
 
   els.schemeSelect.addEventListener("change", () => {
     switchScheme(els.schemeSelect.value);
@@ -398,6 +397,24 @@ function deleteCurrentProject() {
 function bindUploads() {
   els.folderInput.addEventListener("change", (event) => addFiles([...event.target.files]));
   els.singleInput.addEventListener("change", (event) => addFiles([...event.target.files]));
+  ["dragenter", "dragover"].forEach((eventName) => {
+    els.uploadDropZone.addEventListener(eventName, (event) => {
+      event.preventDefault();
+      els.uploadDropZone.classList.add("drag-over");
+    });
+  });
+  ["dragleave", "drop"].forEach((eventName) => {
+    els.uploadDropZone.addEventListener(eventName, (event) => {
+      event.preventDefault();
+      if (eventName === "drop") return;
+      els.uploadDropZone.classList.remove("drag-over");
+    });
+  });
+  els.uploadDropZone.addEventListener("drop", async (event) => {
+    els.uploadDropZone.classList.remove("drag-over");
+    const files = await collectDroppedFiles(event.dataTransfer);
+    addFiles(files);
+  });
   els.referenceInput.addEventListener("change", (event) => {
     const file = event.target.files[0];
     if (!file) return;
@@ -406,6 +423,43 @@ function bindUploads() {
     els.referenceName.textContent = file.name;
     els.referencePreviewWrap.classList.remove("hidden");
     showToast("参考效果图已载入");
+  });
+}
+
+async function collectDroppedFiles(dataTransfer) {
+  const items = [...(dataTransfer.items || [])];
+  if (!items.length) return [...(dataTransfer.files || [])];
+  const files = await Promise.all(items.map(readDroppedItem));
+  return files.flat().filter(Boolean);
+}
+
+async function readDroppedItem(item) {
+  const entry = item.webkitGetAsEntry?.();
+  if (entry) return readEntryFiles(entry);
+  const file = item.getAsFile?.();
+  return file ? [file] : [];
+}
+
+function readEntryFiles(entry) {
+  if (entry.isFile) {
+    return new Promise((resolve) => entry.file((file) => resolve([file]), () => resolve([])));
+  }
+  if (!entry.isDirectory) return Promise.resolve([]);
+  const reader = entry.createReader();
+  const entries = [];
+  return new Promise((resolve) => {
+    const readBatch = () => {
+      reader.readEntries(async (batch) => {
+        if (!batch.length) {
+          const nestedFiles = await Promise.all(entries.map(readEntryFiles));
+          resolve(nestedFiles.flat());
+          return;
+        }
+        entries.push(...batch);
+        readBatch();
+      }, () => resolve([]));
+    };
+    readBatch();
   });
 }
 
@@ -1456,21 +1510,18 @@ function renderSchemeSelect() {
 
 function renderProjectSelect() {
   els.projectSelect.innerHTML = "";
-  els.workProjectSelect.innerHTML = "";
   projects.forEach((project) => {
     const option = document.createElement("option");
     option.value = project.id;
     option.textContent = project.name;
     option.selected = project.id === activeProjectId;
     els.projectSelect.appendChild(option);
-    els.workProjectSelect.appendChild(option.cloneNode(true));
   });
 }
 
 function syncWorkProjectFields() {
   const project = getActiveProject();
   if (els.projectSelect.value !== activeProjectId) els.projectSelect.value = activeProjectId;
-  if (els.workProjectSelect.value !== activeProjectId) els.workProjectSelect.value = activeProjectId;
   els.projectConfigName.value = project.name;
   els.projectConfigDescription.value = project.description || "";
   els.workProjectName.value = rules.projectName;

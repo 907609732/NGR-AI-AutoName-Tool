@@ -214,23 +214,15 @@
 
           <div class="job-config">
             <label>
-              <span>当前项目</span>
-              <select id="workProjectSelect"></select>
-            </label>
-            <label>
               <span>当前项目配置方案</span>
               <select id="workSchemeSelect"></select>
             </label>
-            <label>
-              <span>当前界面工程名</span>
-              <input id="workProjectName" type="text" placeholder="请输入本套界面的工程名" />
-            </label>
           </div>
 
-          <div class="upload-grid">
+          <div class="upload-grid" id="uploadDropZone">
             <label class="upload-panel">
               <span>上传切图文件夹</span>
-              <small>支持 PNG、JPG、JPEG、WebP、GIF、SVG</small>
+              <small>支持拖入文件夹</small>
               <input id="folderInput" type="file" webkitdirectory multiple accept="image/*,.svg" />
             </label>
             <label class="upload-panel">
@@ -254,6 +246,10 @@
           </div>
 
           <div class="batch-tools list-batch-tools">
+            <label>
+              <span>当前界面工程名</span>
+              <input id="workProjectName" type="text" placeholder="请输入本套界面的工程名" />
+            </label>
             <label>
               <span>批量追加后缀</span>
               <input id="batchSuffix" type="text" placeholder="例如：Hover" />
