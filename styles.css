@@ -27,7 +27,8 @@ body {
 
 button,
 input,
-textarea {
+textarea,
+select {
   font: inherit;
 }
 
@@ -181,7 +182,8 @@ label span,
 }
 
 input,
-textarea {
+textarea,
+select {
   width: 100%;
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -191,7 +193,8 @@ textarea {
   outline: none;
 }
 
-input {
+input,
+select {
   height: 42px;
 }
 
@@ -203,7 +206,8 @@ textarea {
 }
 
 input:focus,
-textarea:focus {
+textarea:focus,
+select:focus {
   border-color: var(--primary);
   box-shadow: 0 0 0 4px var(--focus);
 }

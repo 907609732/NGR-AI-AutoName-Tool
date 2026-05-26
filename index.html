@@ -35,6 +35,10 @@
           </div>
 
           <form id="rulesForm" class="rules-grid">
+            <label class="wide">
+              <span>选择方案</span>
+              <select id="schemeSelect"></select>
+            </label>
             <label>
               <span>方案名称</span>
               <input id="schemeName" type="text" placeholder="例如：默认方案" />
@@ -91,6 +95,7 @@
 
           <div class="action-row">
             <button id="saveRules" class="primary-action" type="button">保存规则</button>
+            <button id="saveAsScheme" class="ghost-action" type="button">保存为方案</button>
             <button id="resetRules" class="ghost-action" type="button">恢复默认</button>
           </div>
         </section>

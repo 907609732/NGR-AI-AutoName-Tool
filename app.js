@@ -1,4 +1,5 @@
 const STORAGE_KEY = "ngr-ai-autoname-rules";
+const SCHEME_KEY = "ngr-ai-autoname-rule-schemes";
 const IMAGE_TYPES = ["image/png", "image/jpeg", "image/webp", "image/gif", "image/svg+xml"];
 
 const defaultRules = {
@@ -38,6 +39,7 @@ const builtinTranslations = {
 };
 
 let rules = loadRules();
+let schemes = loadSchemes();
 let assets = [];
 let selectedId = null;
 let toastTimer = null;
@@ -52,6 +54,7 @@ const els = {
   },
   rulesEntry: document.querySelector("#rulesEntry"),
   workEntry: document.querySelector("#workEntry"),
+  schemeSelect: document.querySelector("#schemeSelect"),
   schemeName: document.querySelector("#schemeName"),
   basePrefix: document.querySelector("#basePrefix"),
   projectName: document.querySelector("#projectName"),
@@ -64,6 +67,7 @@ const els = {
   filenameRules: document.querySelector("#filenameRules"),
   prefixPreview: document.querySelector("#prefixPreview"),
   saveRules: document.querySelector("#saveRules"),
+  saveAsScheme: document.querySelector("#saveAsScheme"),
   resetRules: document.querySelector("#resetRules"),
   activeRuleText: document.querySelector("#activeRuleText"),
   folderInput: document.querySelector("#folderInput"),
@@ -90,6 +94,8 @@ function init() {
   bindUploads();
   bindEditor();
   fillRulesForm();
+  upsertScheme(rules);
+  renderSchemeSelect();
   updateRulePreview();
   updateActiveRuleText();
 }
@@ -122,6 +128,19 @@ function bindRules() {
     });
   });
 
+  els.schemeSelect.addEventListener("change", () => {
+    const selected = schemes.find((scheme) => scheme.schemeName === els.schemeSelect.value);
+    if (!selected) return;
+    rules = normalizeLoadedRules({ ...defaultRules, ...selected });
+    saveRules(rules);
+    fillRulesForm();
+    renderSchemeSelect();
+    updateRulePreview();
+    updateActiveRuleText();
+    renderAssetList();
+    showToast("已切换命名方案");
+  });
+
   els.workProjectName.addEventListener("input", () => {
     rules.projectName = sanitizeName(els.workProjectName.value) || defaultRules.projectName;
     els.projectName.value = rules.projectName;
@@ -134,17 +153,33 @@ function bindRules() {
   els.saveRules.addEventListener("click", () => {
     rules = collectRulesForm();
     saveRules(rules);
+    upsertScheme(rules);
     fillRulesForm();
+    renderSchemeSelect();
     updateRulePreview();
     updateActiveRuleText();
     renderAssetList();
     showToast("命名规则已保存");
   });
 
+  els.saveAsScheme.addEventListener("click", () => {
+    rules = collectRulesForm();
+    saveRules(rules);
+    upsertScheme(rules);
+    fillRulesForm();
+    renderSchemeSelect();
+    updateRulePreview();
+    updateActiveRuleText();
+    renderAssetList();
+    showToast("已保存为方案：" + rules.schemeName);
+  });
+
   els.resetRules.addEventListener("click", () => {
     rules = { ...defaultRules };
     saveRules(rules);
+    upsertScheme(rules);
     fillRulesForm();
+    renderSchemeSelect();
     updateRulePreview();
     updateActiveRuleText();
     renderAssetList();
@@ -589,6 +624,17 @@ function fillRulesForm() {
   els.filenameRules.value = rules.filenameRules;
 }
 
+function renderSchemeSelect() {
+  els.schemeSelect.innerHTML = "";
+  schemes.forEach((scheme) => {
+    const option = document.createElement("option");
+    option.value = scheme.schemeName;
+    option.textContent = scheme.schemeName;
+    option.selected = scheme.schemeName === rules.schemeName;
+    els.schemeSelect.appendChild(option);
+  });
+}
+
 function buildPrefix() {
   const separator = rules.separator || "_";
   return [sanitizeName(rules.basePrefix), sanitizeName(rules.projectName), ""].join(separator);
@@ -638,6 +684,36 @@ function loadRules() {
 
 function saveRules(nextRules) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(nextRules));
+}
+
+function loadSchemes() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(SCHEME_KEY));
+    if (Array.isArray(saved) && saved.length) return saved.map((scheme) => normalizeLoadedRules(scheme));
+  } catch {
+    // Ignore invalid local scheme data and rebuild with the default scheme.
+  }
+  return [normalizeLoadedRules({ ...defaultRules })];
+}
+
+function saveSchemes(nextSchemes) {
+  localStorage.setItem(SCHEME_KEY, JSON.stringify(nextSchemes));
+}
+
+function upsertScheme(nextRules) {
+  const clean = normalizeLoadedRules({
+    ...defaultRules,
+    ...nextRules,
+    schemeName: nextRules.schemeName || defaultRules.schemeName,
+  });
+  const index = schemes.findIndex((scheme) => scheme.schemeName === clean.schemeName);
+  if (index >= 0) {
+    schemes[index] = clean;
+  } else {
+    schemes.push(clean);
+  }
+  schemes.sort((a, b) => a.schemeName.localeCompare(b.schemeName, "zh-Hans-CN"));
+  saveSchemes(schemes);
 }
 
 function normalizeLoadedRules(nextRules) {
