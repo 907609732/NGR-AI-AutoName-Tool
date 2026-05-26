@@ -57,6 +57,33 @@
             </label>
           </form>
 
+          <div class="knowledge-panel">
+            <div class="section-head compact-head">
+              <div>
+                <h2>命名知识库</h2>
+                <p>配置团队常用页面、组件、状态和关键词匹配规则，AI 推荐会优先参考这里。</p>
+              </div>
+            </div>
+            <div class="knowledge-grid">
+              <label>
+                <span>页面词库</span>
+                <textarea id="pageTerms" rows="4" placeholder="首页&#10;登录&#10;个人中心&#10;设置"></textarea>
+              </label>
+              <label>
+                <span>组件词库</span>
+                <textarea id="componentTerms" rows="4" placeholder="BG&#10;Button&#10;Icon&#10;Banner&#10;Module"></textarea>
+              </label>
+              <label>
+                <span>状态词库</span>
+                <textarea id="stateTerms" rows="4" placeholder="Normal&#10;Hover&#10;Active&#10;Disabled"></textarea>
+              </label>
+              <label>
+                <span>文件名匹配规则</span>
+                <textarea id="filenameRules" rows="4" placeholder="bg=BG&#10;background=BG&#10;btn=Button&#10;hover=Hover"></textarea>
+              </label>
+            </div>
+          </div>
+
           <div class="preview-line">
             <span>命名预览</span>
             <strong id="prefixPreview">T_UI_工程名_AI自动生成名称</strong>

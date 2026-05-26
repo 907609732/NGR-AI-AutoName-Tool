@@ -26,7 +26,8 @@ body {
 }
 
 button,
-input {
+input,
+textarea {
   font: inherit;
 }
 
@@ -179,9 +180,9 @@ label span,
   font-weight: 650;
 }
 
-input {
+input,
+textarea {
   width: 100%;
-  height: 42px;
   border: 1px solid var(--line);
   border-radius: 8px;
   padding: 0 12px;
@@ -190,7 +191,19 @@ input {
   outline: none;
 }
 
-input:focus {
+input {
+  height: 42px;
+}
+
+textarea {
+  min-height: 112px;
+  padding: 11px 12px;
+  line-height: 1.6;
+  resize: vertical;
+}
+
+input:focus,
+textarea:focus {
   border-color: var(--primary);
   box-shadow: 0 0 0 4px var(--focus);
 }
@@ -209,6 +222,25 @@ input:focus {
   background: var(--surface-2);
   border: 1px solid var(--line);
   border-radius: 8px;
+}
+
+.knowledge-panel {
+  margin-top: 16px;
+  padding: 22px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.compact-head {
+  align-items: flex-start;
+  margin-bottom: 16px;
+}
+
+.knowledge-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
 }
 
 .preview-line span {
@@ -531,6 +563,7 @@ input:focus {
 
   .home-view.active,
   .rules-grid,
+  .knowledge-grid,
   .upload-grid,
   .workspace,
   .batch-tools {

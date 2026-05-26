@@ -7,6 +7,10 @@ const defaultRules = {
   projectName: "工程名",
   separator: "_",
   tags: "BG, Button, Hover, Normal, Icon, Module",
+  pageTerms: "首页\n登录\n个人中心\n设置",
+  componentTerms: "BG\nButton\nIcon\nBanner\nNav\nModule",
+  stateTerms: "Normal\nHover\nActive\nDisabled",
+  filenameRules: "bg=BG\nbackground=BG\nbtn=Button\nbutton=Button\nicon=Icon\nhover=Hover\nactive=Active\ndisabled=Disabled\nhome=首页\nlogin=登录\nuser=个人中心",
 };
 
 let rules = loadRules();
@@ -30,6 +34,10 @@ const els = {
   workProjectName: document.querySelector("#workProjectName"),
   separator: document.querySelector("#separator"),
   tags: document.querySelector("#tags"),
+  pageTerms: document.querySelector("#pageTerms"),
+  componentTerms: document.querySelector("#componentTerms"),
+  stateTerms: document.querySelector("#stateTerms"),
+  filenameRules: document.querySelector("#filenameRules"),
   prefixPreview: document.querySelector("#prefixPreview"),
   saveRules: document.querySelector("#saveRules"),
   resetRules: document.querySelector("#resetRules"),
@@ -80,7 +88,7 @@ function showView(name) {
 }
 
 function bindRules() {
-  [els.schemeName, els.basePrefix, els.projectName, els.separator, els.tags].forEach((input) => {
+  [els.schemeName, els.basePrefix, els.projectName, els.separator, els.tags, els.pageTerms, els.componentTerms, els.stateTerms, els.filenameRules].forEach((input) => {
     input.addEventListener("input", () => {
       rules = collectRulesForm();
       if (input === els.projectName) els.workProjectName.value = rules.projectName;
@@ -327,55 +335,100 @@ function renderAssetList() {
 
 function makeRecommendations(asset) {
   const source = normalizeSourceName(asset.originalBase);
+  const knowledge = parseKnowledge();
+  const mapped = inferMappedTerms(source, knowledge);
   const tags = parseTags(rules.tags);
-  const kind = inferKind(asset, source, tags);
-  const page = inferPage(source);
-  const state = inferState(source);
+  const kind = mapped.component || inferKind(asset, source, tags, knowledge.componentTerms);
+  const page = mapped.page || inferPage(source, knowledge.pageTerms);
+  const state = mapped.state || inferState(source, knowledge.stateTerms);
   const candidates = [
     compactParts([page, kind, state]),
     compactParts([kind, state]),
     compactParts([source || kind]),
-    compactParts([page, tags.includes("Module") ? "Module" : "模块"]),
-    compactParts([kind, tags.includes("Normal") ? "Normal" : "常态"]),
+    compactParts([page, pickTerm(knowledge.componentTerms, "Module", tags.includes("Module") ? "Module" : "模块")]),
+    compactParts([kind, pickTerm(knowledge.stateTerms, "Normal", tags.includes("Normal") ? "Normal" : "常态")]),
+    ...mapped.direct,
   ];
   return [...new Set(candidates.map(sanitizeName).filter(Boolean))].slice(0, 5);
 }
 
-function inferKind(asset, source, tags) {
+function inferKind(asset, source, tags, componentTerms = []) {
   const lower = source.toLowerCase();
-  if (/bg|background|背景/.test(lower)) return pickTag(tags, "BG", "背景");
-  if (/btn|button|按钮/.test(lower)) return pickTag(tags, "Button", "按钮");
-  if (/icon|ico|图标/.test(lower)) return pickTag(tags, "Icon", "图标");
-  if (/logo/.test(lower)) return "Logo";
-  if (/banner/.test(lower)) return "Banner";
-  if (/tab|nav|导航/.test(lower)) return "Nav";
+  if (/bg|background|背景/.test(lower)) return pickTerm(componentTerms, "BG", pickTag(tags, "BG", "背景"));
+  if (/btn|button|按钮/.test(lower)) return pickTerm(componentTerms, "Button", pickTag(tags, "Button", "按钮"));
+  if (/icon|ico|图标/.test(lower)) return pickTerm(componentTerms, "Icon", pickTag(tags, "Icon", "图标"));
+  if (/logo/.test(lower)) return pickTerm(componentTerms, "Logo", "Logo");
+  if (/banner/.test(lower)) return pickTerm(componentTerms, "Banner", "Banner");
+  if (/tab|nav|导航/.test(lower)) return pickTerm(componentTerms, "Nav", "Nav");
   const { width, height } = asset.dimensions;
-  if (width && height && width > height * 2.6) return "Banner";
-  if (width && height && Math.abs(width - height) < 8 && width <= 160) return pickTag(tags, "Icon", "图标");
-  if (width && height && width >= 600 && height >= 300) return pickTag(tags, "BG", "背景");
-  return pickTag(tags, "Module", "模块");
+  if (width && height && width > height * 2.6) return pickTerm(componentTerms, "Banner", "Banner");
+  if (width && height && Math.abs(width - height) < 8 && width <= 160) return pickTerm(componentTerms, "Icon", pickTag(tags, "Icon", "图标"));
+  if (width && height && width >= 600 && height >= 300) return pickTerm(componentTerms, "BG", pickTag(tags, "BG", "背景"));
+  return pickTerm(componentTerms, "Module", pickTag(tags, "Module", "模块"));
 }
 
-function inferPage(source) {
+function inferPage(source, pageTerms = []) {
   const lower = source.toLowerCase();
-  if (/home|index|首页/.test(lower)) return "首页";
-  if (/login|signin|登录/.test(lower)) return "登录";
-  if (/user|profile|mine|个人|我的/.test(lower)) return "个人中心";
-  if (/setting|设置/.test(lower)) return "设置";
+  const matched = matchTerm(source, pageTerms);
+  if (matched) return matched;
+  if (/home|index|首页/.test(lower)) return pickTerm(pageTerms, "首页", "首页");
+  if (/login|signin|登录/.test(lower)) return pickTerm(pageTerms, "登录", "登录");
+  if (/user|profile|mine|个人|我的/.test(lower)) return pickTerm(pageTerms, "个人中心", "个人中心");
+  if (/setting|设置/.test(lower)) return pickTerm(pageTerms, "设置", "设置");
   return "";
 }
 
-function inferState(source) {
+function inferState(source, stateTerms = []) {
   const lower = source.toLowerCase();
-  if (/hover|悬浮/.test(lower)) return "Hover";
-  if (/active|selected|pressed|选中|点击/.test(lower)) return "Active";
-  if (/disabled|disable|不可用/.test(lower)) return "Disabled";
-  if (/normal|default|常态/.test(lower)) return "Normal";
+  const matched = matchTerm(source, stateTerms);
+  if (matched) return matched;
+  if (/hover|悬浮/.test(lower)) return pickTerm(stateTerms, "Hover", "Hover");
+  if (/active|selected|pressed|选中|点击/.test(lower)) return pickTerm(stateTerms, "Active", "Active");
+  if (/disabled|disable|不可用/.test(lower)) return pickTerm(stateTerms, "Disabled", "Disabled");
+  if (/normal|default|常态/.test(lower)) return pickTerm(stateTerms, "Normal", "Normal");
   return "";
 }
 
 function pickTag(tags, preferred, fallback) {
   return tags.find((tag) => tag.toLowerCase() === preferred.toLowerCase()) || fallback;
+}
+
+function pickTerm(terms, preferred, fallback) {
+  return terms.find((term) => term.toLowerCase() === String(preferred).toLowerCase()) || fallback;
+}
+
+function matchTerm(source, terms) {
+  const lower = source.toLowerCase();
+  return terms.find((term) => lower.includes(term.toLowerCase())) || "";
+}
+
+function parseKnowledge() {
+  return {
+    pageTerms: parseList(rules.pageTerms),
+    componentTerms: parseList(rules.componentTerms),
+    stateTerms: parseList(rules.stateTerms),
+    filenameRules: parseFilenameRules(rules.filenameRules),
+  };
+}
+
+function inferMappedTerms(source, knowledge) {
+  const lower = source.toLowerCase();
+  const direct = [];
+  let page = "";
+  let component = "";
+  let state = "";
+  knowledge.filenameRules.forEach((rule) => {
+    if (!lower.includes(rule.keyword.toLowerCase())) return;
+    direct.push(rule.value);
+    if (!page && knowledge.pageTerms.some((term) => sameTerm(term, rule.value))) page = rule.value;
+    if (!component && knowledge.componentTerms.some((term) => sameTerm(term, rule.value))) component = rule.value;
+    if (!state && knowledge.stateTerms.some((term) => sameTerm(term, rule.value))) state = rule.value;
+  });
+  return { page, component, state, direct };
+}
+
+function sameTerm(a, b) {
+  return String(a).toLowerCase() === String(b).toLowerCase();
 }
 
 function normalizeSourceName(name) {
@@ -461,6 +514,10 @@ function collectRulesForm() {
     projectName: sanitizeName(els.workProjectName.value || els.projectName.value) || defaultRules.projectName,
     separator: els.separator.value || defaultRules.separator,
     tags: els.tags.value.trim() || defaultRules.tags,
+    pageTerms: els.pageTerms.value.trim() || defaultRules.pageTerms,
+    componentTerms: els.componentTerms.value.trim() || defaultRules.componentTerms,
+    stateTerms: els.stateTerms.value.trim() || defaultRules.stateTerms,
+    filenameRules: els.filenameRules.value.trim() || defaultRules.filenameRules,
   };
 }
 
@@ -471,6 +528,10 @@ function fillRulesForm() {
   els.workProjectName.value = rules.projectName;
   els.separator.value = rules.separator;
   els.tags.value = rules.tags;
+  els.pageTerms.value = rules.pageTerms;
+  els.componentTerms.value = rules.componentTerms;
+  els.stateTerms.value = rules.stateTerms;
+  els.filenameRules.value = rules.filenameRules;
 }
 
 function buildPrefix() {
@@ -487,10 +548,29 @@ function updateActiveRuleText() {
 }
 
 function parseTags(value) {
+  return parseList(value);
+}
+
+function parseList(value) {
   return String(value || "")
-    .split(/[,，、]/)
+    .split(/[\n,，、]/)
     .map((item) => sanitizeName(item))
     .filter(Boolean);
+}
+
+function parseFilenameRules(value) {
+  return String(value || "")
+    .split(/\n/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => {
+      const parts = line.split("=");
+      return {
+        keyword: sanitizeName(parts[0]),
+        value: sanitizeName(parts.slice(1).join("=") || parts[0]),
+      };
+    })
+    .filter((rule) => rule.keyword && rule.value);
 }
 
 function loadRules() {
