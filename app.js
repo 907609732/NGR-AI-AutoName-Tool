@@ -937,7 +937,13 @@ function renderAssetList() {
       const button = document.createElement("button");
       button.type = "button";
       button.className = "recommendation";
-      button.textContent = name;
+      const nameText = document.createElement("span");
+      nameText.className = "recommendation-name";
+      nameText.textContent = name;
+      const meaningText = document.createElement("span");
+      meaningText.className = "recommendation-meaning";
+      meaningText.textContent = "中文含义：" + explainEnglishName(name);
+      button.append(nameText, meaningText);
       button.addEventListener("click", () => {
         asset.finalBaseName = name;
         renderAssetList();
@@ -951,15 +957,22 @@ function renderAssetList() {
     finalLabel.className = "inline-final-name";
     const finalText = document.createElement("span");
     finalText.textContent = "最终名称";
+    const finalField = document.createElement("div");
+    finalField.className = "inline-final-field";
     const finalInput = document.createElement("input");
     finalInput.type = "text";
     finalInput.value = asset.finalBaseName;
     finalInput.placeholder = "请选择推荐名称或手动输入";
+    const finalMeaning = document.createElement("span");
+    finalMeaning.className = "name-meaning";
+    finalMeaning.textContent = "中文含义：" + explainEnglishName(asset.finalBaseName);
     finalInput.addEventListener("input", () => {
       asset.finalBaseName = sanitizeName(finalInput.value);
       afterName.querySelector("strong").textContent = asset.finalBaseName ? buildExportName(asset) : "待命名";
+      finalMeaning.textContent = "中文含义：" + explainEnglishName(asset.finalBaseName);
     });
-    finalLabel.append(finalText, finalInput);
+    finalField.append(finalInput, finalMeaning);
+    finalLabel.append(finalText, finalField);
 
     editor.append(prefix, recommendationWrap, finalLabel);
     row.append(checkbox, img, text, editor);
@@ -1122,6 +1135,42 @@ function translateTextByDictionary(value) {
       result = result.split(zh).join("_" + en + "_");
     });
   return result;
+}
+
+function explainEnglishName(name) {
+  const clean = sanitizeName(name);
+  if (!clean) return "待填写";
+  const dictionary = buildChineseMeaningDictionary();
+  const words = clean
+    .replace(/([a-z])([A-Z])/g, "$1_$2")
+    .split(/_+/)
+    .map((word) => word.trim())
+    .filter(Boolean);
+  const meanings = words.map((word) => dictionary[word.toLowerCase()] || word);
+  return meanings.join(" / ");
+}
+
+function buildChineseMeaningDictionary() {
+  const dictionary = {};
+  Object.entries(builtinTranslations).forEach(([zh, en]) => {
+    dictionary[String(en).toLowerCase()] = zh;
+  });
+  parseFilenameRules(rules.filenameRules).forEach((rule) => {
+    const key = sanitizeName(rule.value).toLowerCase();
+    if (key && (!dictionary[key] || /[\u4e00-\u9fa5]/.test(rule.keyword))) dictionary[key] = rule.keyword;
+  });
+  return {
+    ...dictionary,
+    bg: dictionary.bg || "背景",
+    nav: dictionary.nav || "导航",
+    cta: "主按钮",
+    popup: "弹窗",
+    module: dictionary.module || "模块",
+    normal: dictionary.normal || "常态",
+    hover: dictionary.hover || "悬浮",
+    active: dictionary.active || "选中",
+    disabled: dictionary.disabled || "禁用",
+  };
 }
 
 function sameTerm(a, b) {

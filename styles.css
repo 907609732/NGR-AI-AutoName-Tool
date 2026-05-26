@@ -756,7 +756,7 @@ button:disabled {
 
 .batch-tools {
   display: grid;
-  grid-template-columns: minmax(180px, 1fr) minmax(180px, 1fr) auto auto;
+  grid-template-columns: minmax(0, 240px) minmax(0, 240px) auto auto;
   gap: 10px;
   align-items: end;
   padding-top: 18px;
@@ -936,9 +936,26 @@ button:disabled {
 }
 
 .recommendations.compact .recommendation {
-  min-height: 32px;
-  padding: 0 10px;
+  min-height: 38px;
+  padding: 5px 10px;
   font-size: 13px;
+  text-align: left;
+}
+
+.recommendation-name {
+  display: block;
+  font-weight: 750;
+  line-height: 1.25;
+}
+
+.recommendation-meaning,
+.name-meaning {
+  display: block;
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.35;
 }
 
 .inline-final-name {
@@ -946,6 +963,11 @@ button:disabled {
   grid-template-columns: 72px minmax(0, 1fr);
   gap: 10px;
   align-items: center;
+}
+
+.inline-final-field {
+  display: grid;
+  gap: 4px;
 }
 
 .inline-final-name input {
