@@ -1169,9 +1169,12 @@ function collectAiSettings() {
 
 function loadAiSettings() {
   try {
-    return normalizeAiSettings(JSON.parse(localStorage.getItem(AI_SETTINGS_KEY)));
+    return normalizeAiSettings({
+      ...readLocalAiConfig(),
+      ...JSON.parse(localStorage.getItem(AI_SETTINGS_KEY)),
+    });
   } catch {
-    return normalizeAiSettings({});
+    return normalizeAiSettings(readLocalAiConfig());
   }
 }
 
@@ -1188,6 +1191,10 @@ function normalizeAiSettings(nextSettings = {}) {
     model: nextSettings.model || "gpt-4.1-mini",
     providerNote: nextSettings.providerNote || "",
   };
+}
+
+function readLocalAiConfig() {
+  return window.NGR_LOCAL_AI_CONFIG || {};
 }
 
 function loadSchemes() {
