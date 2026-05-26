@@ -1,5 +1,7 @@
 const STORAGE_KEY = "ngr-ai-autoname-rules";
 const SCHEME_KEY = "ngr-ai-autoname-rule-schemes";
+const PROJECTS_KEY = "ngr-ai-autoname-projects";
+const ACTIVE_PROJECT_KEY = "ngr-ai-autoname-active-project";
 const AI_SETTINGS_KEY = "ngr-ai-autoname-ai-settings";
 const IMAGE_TYPES = ["image/png", "image/jpeg", "image/webp", "image/gif", "image/svg+xml"];
 
@@ -60,8 +62,10 @@ const builtinTranslations = {
   不可用: "Disabled",
 };
 
-let rules = loadRules();
-let schemes = loadSchemes();
+let projects = loadProjects();
+let activeProjectId = loadActiveProjectId(projects);
+let schemes = getActiveProject().schemes;
+let rules = normalizeLoadedRules({ ...defaultRules, ...schemes[0] });
 let aiSettings = loadAiSettings();
 let assets = [];
 let selectedId = null;
@@ -80,6 +84,10 @@ const els = {
   },
   rulesEntry: document.querySelector("#rulesEntry"),
   workEntry: document.querySelector("#workEntry"),
+  projectSelect: document.querySelector("#projectSelect"),
+  workProjectSelect: document.querySelector("#workProjectSelect"),
+  projectConfigName: document.querySelector("#projectConfigName"),
+  projectConfigDescription: document.querySelector("#projectConfigDescription"),
   schemeSelect: document.querySelector("#schemeSelect"),
   workSchemeSelect: document.querySelector("#workSchemeSelect"),
   schemeName: document.querySelector("#schemeName"),
@@ -99,11 +107,17 @@ const els = {
   openaiApiKey: document.querySelector("#openaiApiKey"),
   openaiModel: document.querySelector("#openaiModel"),
   aiProviderNote: document.querySelector("#aiProviderNote"),
+  saveAiSettings: document.querySelector("#saveAiSettings"),
+  testAiSettings: document.querySelector("#testAiSettings"),
   exportSchemeTemplate: document.querySelector("#exportSchemeTemplate"),
   importSchemeTemplate: document.querySelector("#importSchemeTemplate"),
   prefixPreview: document.querySelector("#prefixPreview"),
   saveRules: document.querySelector("#saveRules"),
   saveAsScheme: document.querySelector("#saveAsScheme"),
+  deleteScheme: document.querySelector("#deleteScheme"),
+  newProject: document.querySelector("#newProject"),
+  saveProject: document.querySelector("#saveProject"),
+  deleteProject: document.querySelector("#deleteProject"),
   resetRules: document.querySelector("#resetRules"),
   activeRuleText: document.querySelector("#activeRuleText"),
   folderInput: document.querySelector("#folderInput"),
@@ -132,7 +146,9 @@ function init() {
   bindEditor();
   fillRulesForm();
   fillAiSettings();
-  upsertScheme(rules);
+  upsertScheme(rules, false);
+  saveProjects();
+  renderProjectSelect();
   renderSchemeSelect();
   updateRulePreview();
   updateActiveRuleText();
@@ -156,7 +172,7 @@ function showView(name) {
 }
 
 function bindRules() {
-  [els.schemeName, els.basePrefix, els.projectName, els.separator, els.tags, els.pageTerms, els.componentTerms, els.stateTerms, els.filenameRules, els.contextDocs].forEach((input) => {
+  [els.projectConfigName, els.projectConfigDescription, els.schemeName, els.basePrefix, els.projectName, els.separator, els.tags, els.pageTerms, els.componentTerms, els.stateTerms, els.filenameRules, els.contextDocs].forEach((input) => {
     input.addEventListener("input", () => {
       rules = collectRulesForm();
       if (input === els.projectName) els.workProjectName.value = rules.projectName;
@@ -165,6 +181,9 @@ function bindRules() {
       renderAssetList();
     });
   });
+
+  els.projectSelect.addEventListener("change", () => switchProject(els.projectSelect.value));
+  els.workProjectSelect.addEventListener("change", () => switchProject(els.workProjectSelect.value));
 
   els.schemeSelect.addEventListener("change", () => {
     switchScheme(els.schemeSelect.value);
@@ -187,31 +206,45 @@ function bindRules() {
     rules = collectRulesForm();
     saveRules(rules);
     upsertScheme(rules);
+    saveProjectMeta();
     fillRulesForm();
+    renderProjectSelect();
     renderSchemeSelect();
     updateRulePreview();
     updateActiveRuleText();
     renderAssetList();
-    showToast("命名规则已保存");
+    showToast("项目配置方案已保存");
   });
 
   els.saveAsScheme.addEventListener("click", () => {
     rules = collectRulesForm();
     saveRules(rules);
     upsertScheme(rules);
+    saveProjectMeta();
     fillRulesForm();
+    renderProjectSelect();
     renderSchemeSelect();
     updateRulePreview();
     updateActiveRuleText();
     renderAssetList();
-    showToast("已保存为方案：" + rules.schemeName);
+    showToast("已保存配置方案：" + rules.schemeName);
   });
+
+  els.deleteScheme.addEventListener("click", deleteCurrentScheme);
+  els.newProject.addEventListener("click", createProject);
+  els.saveProject.addEventListener("click", () => {
+    saveProjectMeta();
+    renderProjectSelect();
+    showToast("项目已保存");
+  });
+  els.deleteProject.addEventListener("click", deleteCurrentProject);
 
   els.resetRules.addEventListener("click", () => {
     rules = { ...defaultRules };
     saveRules(rules);
     upsertScheme(rules);
     fillRulesForm();
+    renderProjectSelect();
     renderSchemeSelect();
     updateRulePreview();
     updateActiveRuleText();
@@ -222,15 +255,21 @@ function bindRules() {
   [els.aiProvider, els.aiApiFormat, els.aiBaseUrl, els.openaiApiKey, els.openaiModel, els.aiProviderNote].forEach((input) => {
     input.addEventListener("input", () => {
       aiSettings = collectAiSettings();
-      saveAiSettings(aiSettings);
     });
   });
 
   els.aiProvider.addEventListener("change", () => {
     applyProviderPreset();
     aiSettings = collectAiSettings();
-    saveAiSettings(aiSettings);
   });
+
+  els.saveAiSettings.addEventListener("click", () => {
+    aiSettings = collectAiSettings();
+    saveAiSettings(aiSettings);
+    showToast("AI 配置已保存");
+  });
+
+  els.testAiSettings.addEventListener("click", testAiSettings);
 
   els.exportSchemeTemplate.addEventListener("click", exportSchemeTemplate);
   els.importSchemeTemplate.addEventListener("change", importSchemeTemplate);
@@ -246,7 +285,102 @@ function switchScheme(schemeName) {
   updateRulePreview();
   updateActiveRuleText();
   renderAssetList();
-  showToast("已切换项目配置");
+  showToast("已切换配置方案");
+}
+
+function createProject() {
+  const index = projects.length + 1;
+  const project = {
+    id: "project-" + Date.now(),
+    name: "新项目 " + index,
+    description: "新的项目命名配置",
+    schemes: [
+      normalizeLoadedRules({
+        ...defaultRules,
+        schemeName: "默认配置方案",
+        projectName: "NewProject",
+        contextDocs: "填写这个项目的页面结构、组件约定和命名偏好。AI 命名时会参考这里的内容。",
+      }),
+    ],
+  };
+  projects.push(project);
+  activeProjectId = project.id;
+  schemes = project.schemes;
+  rules = normalizeLoadedRules({ ...defaultRules, ...schemes[0] });
+  saveProjects();
+  saveRules(rules);
+  fillRulesForm();
+  renderProjectSelect();
+  renderSchemeSelect();
+  updateRulePreview();
+  updateActiveRuleText();
+  renderAssetList();
+  showToast("已新建项目");
+}
+
+function switchProject(projectId) {
+  const nextProject = projects.find((project) => project.id === projectId);
+  if (!nextProject) return;
+  activeProjectId = projectId;
+  localStorage.setItem(ACTIVE_PROJECT_KEY, activeProjectId);
+  schemes = nextProject.schemes.length ? nextProject.schemes : [normalizeLoadedRules({ ...defaultRules })];
+  nextProject.schemes = schemes;
+  rules = normalizeLoadedRules({ ...defaultRules, ...schemes[0] });
+  saveRules(rules);
+  fillRulesForm();
+  renderProjectSelect();
+  renderSchemeSelect();
+  updateRulePreview();
+  updateActiveRuleText();
+  renderAssetList();
+  showToast("已切换项目");
+}
+
+function saveProjectMeta() {
+  const project = getActiveProject();
+  project.name = els.projectConfigName.value.trim() || project.name || "未命名项目";
+  project.description = els.projectConfigDescription.value.trim();
+  saveProjects();
+}
+
+function deleteCurrentScheme() {
+  if (schemes.length <= 1) {
+    showToast("至少保留一个配置方案");
+    return;
+  }
+  const target = rules.schemeName;
+  schemes = schemes.filter((scheme) => scheme.schemeName !== target);
+  getActiveProject().schemes = schemes;
+  rules = normalizeLoadedRules({ ...defaultRules, ...schemes[0] });
+  saveProjects();
+  saveRules(rules);
+  fillRulesForm();
+  renderSchemeSelect();
+  updateRulePreview();
+  updateActiveRuleText();
+  renderAssetList();
+  showToast("已删除配置方案");
+}
+
+function deleteCurrentProject() {
+  if (projects.length <= 1) {
+    showToast("至少保留一个项目");
+    return;
+  }
+  projects = projects.filter((project) => project.id !== activeProjectId);
+  activeProjectId = projects[0].id;
+  schemes = getActiveProject().schemes;
+  rules = normalizeLoadedRules({ ...defaultRules, ...schemes[0] });
+  saveProjects();
+  localStorage.setItem(ACTIVE_PROJECT_KEY, activeProjectId);
+  saveRules(rules);
+  fillRulesForm();
+  renderProjectSelect();
+  renderSchemeSelect();
+  updateRulePreview();
+  updateActiveRuleText();
+  renderAssetList();
+  showToast("已删除项目");
 }
 
 function bindUploads() {
@@ -451,6 +585,53 @@ function applyProviderPreset() {
     els.openaiModel.value = "moonshot-v1-8k-vision-preview";
     els.aiProviderNote.value = "Kimi / Moonshot 视觉模型";
   }
+}
+
+async function testAiSettings() {
+  aiSettings = collectAiSettings();
+  saveAiSettings(aiSettings);
+  if (!aiSettings.apiKey) {
+    showToast("请先填写 API Key");
+    return;
+  }
+  els.testAiSettings.disabled = true;
+  els.testAiSettings.textContent = "测试中";
+  try {
+    const endpoint = buildAiEndpoint(aiSettings.apiFormat || "responses");
+    const response = await fetch(endpoint, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: "Bearer " + aiSettings.apiKey,
+      },
+      body: JSON.stringify(buildAiTestPayload()),
+    });
+    showToast(response.ok ? "API 测试通过，配置已保存" : "API 测试失败，请检查地址、Key 和模型");
+  } catch {
+    showToast("API 测试失败，请检查网络或接口地址");
+  } finally {
+    els.testAiSettings.disabled = false;
+    els.testAiSettings.textContent = "测试 API";
+  }
+}
+
+function buildAiTestPayload() {
+  const prompt = "请只返回 JSON：{\"names\":[\"Test_Name\"]}";
+  if ((aiSettings.apiFormat || "responses") === "chat") {
+    return {
+      model: aiSettings.model,
+      messages: [
+        {
+          role: "user",
+          content: prompt,
+        },
+      ],
+    };
+  }
+  return {
+    model: aiSettings.model,
+    input: prompt,
+  };
 }
 
 function buildAiPrompt(asset, localRecommendations) {
@@ -985,6 +1166,9 @@ function collectRulesForm() {
 }
 
 function fillRulesForm() {
+  const project = getActiveProject();
+  els.projectConfigName.value = project.name;
+  els.projectConfigDescription.value = project.description || "";
   els.schemeName.value = rules.schemeName;
   els.basePrefix.value = rules.basePrefix;
   els.projectName.value = rules.projectName;
@@ -1258,6 +1442,19 @@ function renderSchemeSelect() {
   });
 }
 
+function renderProjectSelect() {
+  els.projectSelect.innerHTML = "";
+  els.workProjectSelect.innerHTML = "";
+  projects.forEach((project) => {
+    const option = document.createElement("option");
+    option.value = project.id;
+    option.textContent = project.name;
+    option.selected = project.id === activeProjectId;
+    els.projectSelect.appendChild(option);
+    els.workProjectSelect.appendChild(option.cloneNode(true));
+  });
+}
+
 function buildPrefix() {
   const separator = rules.separator || "_";
   return [sanitizeName(rules.basePrefix), sanitizeName(rules.projectName), ""].join(separator);
@@ -1364,6 +1561,79 @@ function saveSchemes(nextSchemes) {
   localStorage.setItem(SCHEME_KEY, JSON.stringify(nextSchemes));
 }
 
+function loadProjects() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(PROJECTS_KEY));
+    if (Array.isArray(saved) && saved.length) return normalizeProjects(saved);
+  } catch {
+    // Rebuild projects below.
+  }
+  return normalizeProjects([
+    {
+      id: "default",
+      name: "默认项目",
+      description: "通用项目配置",
+      schemes: loadSchemes(),
+    },
+    {
+      id: "ngr",
+      name: "NGR",
+      description: "NGR 项目",
+      schemes: [
+        builtinSchemes[0],
+        { ...builtinSchemes[0], schemeName: "NGR按钮状态规范", contextDocs: builtinSchemes[0].contextDocs + "\n重点识别 Button、Normal、Hover、Active、Disabled 等按钮状态。" },
+        { ...builtinSchemes[0], schemeName: "NGR页面模块规范", contextDocs: builtinSchemes[0].contextDocs + "\n重点识别页面模块、背景图和 Banner，保持首字母大写驼峰词。" },
+      ],
+    },
+    {
+      id: "yysls",
+      name: "yysls",
+      description: "yysls 项目",
+      schemes: [
+        builtinSchemes[1],
+        { ...builtinSchemes[1], schemeName: "yysls拼音混合规范", contextDocs: builtinSchemes[1].contextDocs + "\n优先保留团队常用拼音词，例如 AnNiu、BeiJing、TuBiao。" },
+        { ...builtinSchemes[1], schemeName: "yysls通用UI规范", contextDocs: builtinSchemes[1].contextDocs + "\n适合通用 UI 切图，允许英文组件词和拼音页面词混用。" },
+      ],
+    },
+    {
+      id: "more",
+      name: "更多项目正在持续开发中",
+      description: "更多项目正在持续开发中",
+      schemes: [builtinSchemes[2]],
+    },
+  ]);
+}
+
+function normalizeProjects(nextProjects) {
+  return nextProjects.map((project, index) => ({
+    id: project.id || "project-" + index + "-" + Date.now(),
+    name: project.name || "未命名项目",
+    description: project.description || "",
+    schemes: ensureBuiltinSchemeForProject(project.name, (project.schemes || []).map((scheme) => normalizeLoadedRules(scheme))),
+  }));
+}
+
+function ensureBuiltinSchemeForProject(projectName, nextSchemes) {
+  const match = builtinSchemes.find((scheme) => projectName.includes("NGR") && scheme.schemeName === "NGR命名规范" || projectName.includes("yysls") && scheme.schemeName === "yysls命名规范" || projectName.includes("更多") && scheme.schemeName === "更多项目正在持续开发中");
+  if (match && !nextSchemes.some((scheme) => scheme.schemeName === match.schemeName)) nextSchemes.push(normalizeLoadedRules(match));
+  return nextSchemes.length ? nextSchemes : [normalizeLoadedRules({ ...defaultRules })];
+}
+
+function loadActiveProjectId(nextProjects) {
+  const saved = localStorage.getItem(ACTIVE_PROJECT_KEY);
+  return nextProjects.some((project) => project.id === saved) ? saved : nextProjects[0].id;
+}
+
+function getActiveProject() {
+  return projects.find((project) => project.id === activeProjectId) || projects[0];
+}
+
+function saveProjects() {
+  getActiveProject().schemes = schemes;
+  localStorage.setItem(PROJECTS_KEY, JSON.stringify(projects));
+  localStorage.setItem(ACTIVE_PROJECT_KEY, activeProjectId);
+}
+
 function ensureBuiltinSchemes(nextSchemes) {
   const merged = [...nextSchemes];
   builtinSchemes.forEach((scheme) => {
@@ -1374,7 +1644,7 @@ function ensureBuiltinSchemes(nextSchemes) {
   return merged;
 }
 
-function upsertScheme(nextRules) {
+function upsertScheme(nextRules, shouldSave = true) {
   const clean = normalizeLoadedRules({
     ...defaultRules,
     ...nextRules,
@@ -1387,7 +1657,8 @@ function upsertScheme(nextRules) {
     schemes.push(clean);
   }
   schemes.sort((a, b) => a.schemeName.localeCompare(b.schemeName, "zh-Hans-CN"));
-  saveSchemes(schemes);
+  getActiveProject().schemes = schemes;
+  if (shouldSave) saveProjects();
 }
 
 function normalizeLoadedRules(nextRules) {

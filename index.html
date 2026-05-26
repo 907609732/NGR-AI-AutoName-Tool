@@ -39,8 +39,20 @@
           </div>
 
           <form id="rulesForm" class="rules-grid">
-            <label class="wide">
+            <label>
               <span>选择你的项目</span>
+              <select id="projectSelect"></select>
+            </label>
+            <label>
+              <span>项目名称</span>
+              <input id="projectConfigName" type="text" placeholder="例如：NGR" />
+            </label>
+            <label class="wide">
+              <span>项目描述</span>
+              <input id="projectConfigDescription" type="text" placeholder="描述这个项目的命名特点" />
+            </label>
+            <label>
+              <span>选择项目配置方案</span>
               <select id="schemeSelect"></select>
             </label>
             <label>
@@ -152,6 +164,10 @@
                 <input id="aiProviderNote" type="text" placeholder="例如：Kimi / 通义千问 / DeepSeek / 豆包 / Claude 网关" />
               </label>
             </div>
+            <div class="action-row compact-actions">
+              <button id="saveAiSettings" class="primary-action" type="button">保存 AI 配置</button>
+              <button id="testAiSettings" class="ghost-action" type="button">测试 API</button>
+            </div>
           </div>
 
           <div class="knowledge-panel import-export-panel">
@@ -177,7 +193,11 @@
 
           <div class="action-row">
             <button id="saveRules" class="primary-action" type="button">保存规则</button>
-            <button id="saveAsScheme" class="ghost-action" type="button">保存为项目配置</button>
+            <button id="saveAsScheme" class="ghost-action" type="button">保存为配置方案</button>
+            <button id="deleteScheme" class="danger-action" type="button">删除配置方案</button>
+            <button id="newProject" class="ghost-action" type="button">新建项目</button>
+            <button id="saveProject" class="ghost-action" type="button">保存项目</button>
+            <button id="deleteProject" class="danger-action" type="button">删除项目</button>
             <button id="resetRules" class="ghost-action" type="button">恢复默认</button>
           </div>
         </section>
@@ -197,7 +217,11 @@
 
           <div class="job-config">
             <label>
-              <span>当前项目配置</span>
+              <span>当前项目</span>
+              <select id="workProjectSelect"></select>
+            </label>
+            <label>
+              <span>当前项目配置方案</span>
               <select id="workSchemeSelect"></select>
             </label>
             <label>
