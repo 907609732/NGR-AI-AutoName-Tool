@@ -7,10 +7,34 @@ const defaultRules = {
   projectName: "工程名",
   separator: "_",
   tags: "BG, Button, Hover, Normal, Icon, Module",
-  pageTerms: "首页\n登录\n个人中心\n设置",
+  pageTerms: "Home\nLogin\nProfile\nSettings",
   componentTerms: "BG\nButton\nIcon\nBanner\nNav\nModule",
   stateTerms: "Normal\nHover\nActive\nDisabled",
-  filenameRules: "bg=BG\nbackground=BG\nbtn=Button\nbutton=Button\nicon=Icon\nhover=Hover\nactive=Active\ndisabled=Disabled\nhome=首页\nlogin=登录\nuser=个人中心",
+  filenameRules: "首页=Home\n主页=Home\n登录=Login\n登陆=Login\n个人中心=Profile\n我的=Profile\n设置=Settings\n背景=BG\n底图=BG\n按钮=Button\n图标=Icon\n导航=Nav\n横幅=Banner\n模块=Module\n常态=Normal\n默认=Normal\n悬浮=Hover\n选中=Active\n点击=Active\n禁用=Disabled\n不可用=Disabled\nbg=BG\nbackground=BG\nbtn=Button\nbutton=Button\nicon=Icon\nhover=Hover\nactive=Active\ndisabled=Disabled\nhome=Home\nlogin=Login\nuser=Profile",
+};
+
+const builtinTranslations = {
+  首页: "Home",
+  主页: "Home",
+  登录: "Login",
+  登陆: "Login",
+  个人中心: "Profile",
+  我的: "Profile",
+  设置: "Settings",
+  背景: "BG",
+  底图: "BG",
+  按钮: "Button",
+  图标: "Icon",
+  导航: "Nav",
+  横幅: "Banner",
+  模块: "Module",
+  常态: "Normal",
+  默认: "Normal",
+  悬浮: "Hover",
+  选中: "Active",
+  点击: "Active",
+  禁用: "Disabled",
+  不可用: "Disabled",
 };
 
 let rules = loadRules();
@@ -338,13 +362,14 @@ function makeRecommendations(asset) {
   const knowledge = parseKnowledge();
   const mapped = inferMappedTerms(source, knowledge);
   const tags = parseTags(rules.tags);
+  const translatedSource = translateFilename(source, knowledge);
   const kind = mapped.component || inferKind(asset, source, tags, knowledge.componentTerms);
   const page = mapped.page || inferPage(source, knowledge.pageTerms);
   const state = mapped.state || inferState(source, knowledge.stateTerms);
   const candidates = [
     compactParts([page, kind, state]),
     compactParts([kind, state]),
-    compactParts([source || kind]),
+    compactParts([translatedSource || kind]),
     compactParts([page, pickTerm(knowledge.componentTerms, "Module", tags.includes("Module") ? "Module" : "模块")]),
     compactParts([kind, pickTerm(knowledge.stateTerms, "Normal", tags.includes("Normal") ? "Normal" : "常态")]),
     ...mapped.direct,
@@ -354,12 +379,15 @@ function makeRecommendations(asset) {
 
 function inferKind(asset, source, tags, componentTerms = []) {
   const lower = source.toLowerCase();
+  const translated = translateTextByDictionary(source).toLowerCase();
   if (/bg|background|背景/.test(lower)) return pickTerm(componentTerms, "BG", pickTag(tags, "BG", "背景"));
   if (/btn|button|按钮/.test(lower)) return pickTerm(componentTerms, "Button", pickTag(tags, "Button", "按钮"));
   if (/icon|ico|图标/.test(lower)) return pickTerm(componentTerms, "Icon", pickTag(tags, "Icon", "图标"));
   if (/logo/.test(lower)) return pickTerm(componentTerms, "Logo", "Logo");
-  if (/banner/.test(lower)) return pickTerm(componentTerms, "Banner", "Banner");
+  if (/banner|横幅/.test(lower)) return pickTerm(componentTerms, "Banner", "Banner");
   if (/tab|nav|导航/.test(lower)) return pickTerm(componentTerms, "Nav", "Nav");
+  if (/button/.test(translated)) return pickTerm(componentTerms, "Button", pickTag(tags, "Button", "Button"));
+  if (/icon/.test(translated)) return pickTerm(componentTerms, "Icon", pickTag(tags, "Icon", "Icon"));
   const { width, height } = asset.dimensions;
   if (width && height && width > height * 2.6) return pickTerm(componentTerms, "Banner", "Banner");
   if (width && height && Math.abs(width - height) < 8 && width <= 160) return pickTerm(componentTerms, "Icon", pickTag(tags, "Icon", "图标"));
@@ -371,10 +399,10 @@ function inferPage(source, pageTerms = []) {
   const lower = source.toLowerCase();
   const matched = matchTerm(source, pageTerms);
   if (matched) return matched;
-  if (/home|index|首页/.test(lower)) return pickTerm(pageTerms, "首页", "首页");
-  if (/login|signin|登录/.test(lower)) return pickTerm(pageTerms, "登录", "登录");
-  if (/user|profile|mine|个人|我的/.test(lower)) return pickTerm(pageTerms, "个人中心", "个人中心");
-  if (/setting|设置/.test(lower)) return pickTerm(pageTerms, "设置", "设置");
+  if (/home|index|首页|主页/.test(lower)) return pickTerm(pageTerms, "Home", "Home");
+  if (/login|signin|登录|登陆/.test(lower)) return pickTerm(pageTerms, "Login", "Login");
+  if (/user|profile|mine|个人|我的/.test(lower)) return pickTerm(pageTerms, "Profile", "Profile");
+  if (/setting|settings|设置/.test(lower)) return pickTerm(pageTerms, "Settings", "Settings");
   return "";
 }
 
@@ -384,8 +412,8 @@ function inferState(source, stateTerms = []) {
   if (matched) return matched;
   if (/hover|悬浮/.test(lower)) return pickTerm(stateTerms, "Hover", "Hover");
   if (/active|selected|pressed|选中|点击/.test(lower)) return pickTerm(stateTerms, "Active", "Active");
-  if (/disabled|disable|不可用/.test(lower)) return pickTerm(stateTerms, "Disabled", "Disabled");
-  if (/normal|default|常态/.test(lower)) return pickTerm(stateTerms, "Normal", "Normal");
+  if (/disabled|disable|禁用|不可用/.test(lower)) return pickTerm(stateTerms, "Disabled", "Disabled");
+  if (/normal|default|常态|默认/.test(lower)) return pickTerm(stateTerms, "Normal", "Normal");
   return "";
 }
 
@@ -419,12 +447,39 @@ function inferMappedTerms(source, knowledge) {
   let state = "";
   knowledge.filenameRules.forEach((rule) => {
     if (!lower.includes(rule.keyword.toLowerCase())) return;
-    direct.push(rule.value);
-    if (!page && knowledge.pageTerms.some((term) => sameTerm(term, rule.value))) page = rule.value;
-    if (!component && knowledge.componentTerms.some((term) => sameTerm(term, rule.value))) component = rule.value;
-    if (!state && knowledge.stateTerms.some((term) => sameTerm(term, rule.value))) state = rule.value;
+    const translatedValue = translateRuleValue(rule.value);
+    direct.push(translatedValue);
+    if (!page && knowledge.pageTerms.some((term) => sameTerm(term, translatedValue) || sameTerm(term, rule.value))) page = translatedValue;
+    if (!component && knowledge.componentTerms.some((term) => sameTerm(term, translatedValue) || sameTerm(term, rule.value))) component = translatedValue;
+    if (!state && knowledge.stateTerms.some((term) => sameTerm(term, translatedValue) || sameTerm(term, rule.value))) state = translatedValue;
   });
   return { page, component, state, direct };
+}
+
+function translateFilename(source, knowledge) {
+  const mappedValues = [];
+  const lower = source.toLowerCase();
+  knowledge.filenameRules.forEach((rule) => {
+    if (lower.includes(rule.keyword.toLowerCase())) mappedValues.push(translateRuleValue(rule.value, knowledge));
+  });
+  if (mappedValues.length) return compactParts([...new Set(mappedValues)]);
+  return translateTextByDictionary(source)
+    .replace(/([a-z])([A-Z])/g, "$1_$2")
+    .replace(/[^A-Za-z0-9_]+/g, "_");
+}
+
+function translateRuleValue(value) {
+  return builtinTranslations[value] || value;
+}
+
+function translateTextByDictionary(value) {
+  let result = String(value || "");
+  Object.entries(builtinTranslations)
+    .sort((a, b) => b[0].length - a[0].length)
+    .forEach(([zh, en]) => {
+      result = result.split(zh).join("_" + en + "_");
+    });
+  return result;
 }
 
 function sameTerm(a, b) {
@@ -575,7 +630,7 @@ function parseFilenameRules(value) {
 
 function loadRules() {
   try {
-    return { ...defaultRules, ...JSON.parse(localStorage.getItem(STORAGE_KEY)) };
+    return normalizeLoadedRules({ ...defaultRules, ...JSON.parse(localStorage.getItem(STORAGE_KEY)) });
   } catch {
     return { ...defaultRules };
   }
@@ -583,6 +638,22 @@ function loadRules() {
 
 function saveRules(nextRules) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(nextRules));
+}
+
+function normalizeLoadedRules(nextRules) {
+  const merged = { ...defaultRules, ...nextRules };
+  merged.filenameRules = mergeRuleText(defaultRules.filenameRules, merged.filenameRules);
+  return merged;
+}
+
+function mergeRuleText(defaultText, savedText) {
+  const savedLines = String(savedText || "").split("\n").filter(Boolean);
+  const savedKeys = new Set(savedLines.map((line) => line.split("=")[0].trim().toLowerCase()));
+  const missingDefaults = String(defaultText || "")
+    .split("\n")
+    .filter(Boolean)
+    .filter((line) => !savedKeys.has(line.split("=")[0].trim().toLowerCase()));
+  return [...savedLines, ...missingDefaults].join("\n");
 }
 
 function showToast(message) {
