@@ -793,27 +793,15 @@ function fillAiSettings() {
 
 function exportSchemeTemplate() {
   const current = collectRulesForm();
-  const rows = [
-    ["模块", "字段", "值"],
-    ["基础配置", "方案名称", current.schemeName],
-    ["基础配置", "固定前缀", current.basePrefix],
-    ["基础配置", "工程名", current.projectName],
-    ["基础配置", "分隔符", current.separator],
-    ["基础配置", "常用标签", current.tags],
-    ...parseList(current.pageTerms).map((value) => ["页面词库", "页面名", value]),
-    ...parseList(current.componentTerms).map((value) => ["组件词库", "组件名", value]),
-    ...parseList(current.stateTerms).map((value) => ["状态词库", "状态名", value]),
-    ...parseFilenameRules(current.filenameRules).map((rule) => ["文件名匹配规则", rule.keyword, rule.value]),
-  ];
-  const csv = "\ufeff" + rows.map((row) => row.map(csvCell).join(",")).join("\n");
-  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+  const workbook = buildExcelTemplate(current);
+  const blob = new Blob([workbook], { type: "application/vnd.ms-excel;charset=utf-8" });
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
-  link.download = sanitizeName(current.schemeName) + "_命名方案模板.csv";
+  link.download = sanitizeName(current.schemeName) + "_命名方案模板.xls";
   link.click();
   URL.revokeObjectURL(url);
-  showToast("已导出当前方案模板");
+  showToast("已导出多页签方案模板");
 }
 
 async function importSchemeTemplate(event) {
@@ -821,7 +809,7 @@ async function importSchemeTemplate(event) {
   if (!file) return;
   try {
     const text = await file.text();
-    const imported = parseSchemeTemplateCsv(text);
+    const imported = parseSchemeTemplate(text, file.name);
     rules = normalizeLoadedRules({ ...defaultRules, ...imported });
     saveRules(rules);
     upsertScheme(rules);
@@ -832,10 +820,128 @@ async function importSchemeTemplate(event) {
     renderAssetList();
     showToast("已导入方案模板：" + rules.schemeName);
   } catch (error) {
-    showToast("导入失败，请检查 CSV 模板格式");
+    showToast("导入失败，请检查模板格式");
   } finally {
     event.target.value = "";
   }
+}
+
+function buildExcelTemplate(current) {
+  const pageRows = parseList(current.pageTerms).map((value, index) => [index + 1, value, "页面英文名，用于生成 Home_BG 等名称"]);
+  const componentRows = parseList(current.componentTerms).map((value, index) => [index + 1, value, "组件英文名，用于识别按钮、背景、图标等"]);
+  const stateRows = parseList(current.stateTerms).map((value, index) => [index + 1, value, "状态英文名，用于 Normal、Hover 等交互状态"]);
+  const ruleRows = parseFilenameRules(current.filenameRules).map((rule) => [rule.keyword, rule.value, "原始文件名包含关键词时，自动转换为英文名"]);
+  const sheets = [
+    {
+      name: "使用说明",
+      rows: [
+        ["AI辅助UI切图命名工具 - 方案模板"],
+        ["请在各页签中修改“值”或词库内容，保存后回到网页导入。"],
+        ["基础配置页：维护方案名称、固定前缀、工程名、分隔符、常用标签。"],
+        ["页面词库/组件词库/状态词库：每行填写一个英文命名词。"],
+        ["文件名匹配规则：第一列填写中文或英文关键词，第二列填写转换后的英文名。"],
+        ["不要修改页签名称和表头，否则可能无法导入。"],
+      ],
+    },
+    {
+      name: "基础配置",
+      rows: [
+        ["字段", "值", "说明"],
+        ["方案名称", current.schemeName, "自定义方案名称，会显示在网页的选择方案下拉框中"],
+        ["固定前缀", current.basePrefix, "例如 T_UI"],
+        ["工程名", current.projectName, "当前项目或界面工程名，也可在开始命名页临时修改"],
+        ["分隔符", current.separator, "推荐使用 _"],
+        ["常用标签", current.tags, "多个标签可用英文逗号分隔"],
+      ],
+    },
+    {
+      name: "页面词库",
+      rows: [["序号", "页面英文名", "说明"], ...pageRows],
+    },
+    {
+      name: "组件词库",
+      rows: [["序号", "组件英文名", "说明"], ...componentRows],
+    },
+    {
+      name: "状态词库",
+      rows: [["序号", "状态英文名", "说明"], ...stateRows],
+    },
+    {
+      name: "文件名匹配规则",
+      rows: [["原始文件名关键词", "转换后的英文名", "说明"], ...ruleRows],
+    },
+  ];
+  return [
+    '<?xml version="1.0"?>',
+    '<?mso-application progid="Excel.Sheet"?>',
+    '<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">',
+    '<Styles><Style ss:ID="Header"><Font ss:Bold="1"/><Interior ss:Color="#DCEEEF" ss:Pattern="Solid"/></Style></Styles>',
+    sheets.map((sheet) => buildWorksheet(sheet.name, sheet.rows)).join(""),
+    "</Workbook>",
+  ].join("");
+}
+
+function buildWorksheet(name, rows) {
+  return [
+    '<Worksheet ss:Name="' + xmlEscape(name) + '"><Table>',
+    rows.map((row, rowIndex) => {
+      const style = rowIndex === 0 ? ' ss:StyleID="Header"' : "";
+      return "<Row>" + row.map((cell) => '<Cell' + style + '><Data ss:Type="String">' + xmlEscape(cell) + "</Data></Cell>").join("") + "</Row>";
+    }).join(""),
+    "</Table></Worksheet>",
+  ].join("");
+}
+
+function parseSchemeTemplate(text, fileName) {
+  if (/\.csv$/i.test(fileName) || !text.trim().startsWith("<")) {
+    return parseSchemeTemplateCsv(text);
+  }
+  return parseSchemeTemplateWorkbook(text);
+}
+
+function parseSchemeTemplateWorkbook(text) {
+  const xml = new DOMParser().parseFromString(text, "text/xml");
+  if (xml.querySelector("parsererror")) throw new Error("Invalid Excel XML");
+  const next = { ...defaultRules };
+  const pageTerms = readWorksheetValues(xml, "页面词库", 1);
+  const componentTerms = readWorksheetValues(xml, "组件词库", 1);
+  const stateTerms = readWorksheetValues(xml, "状态词库", 1);
+  const rulesRows = readWorksheetRows(xml, "文件名匹配规则").slice(1);
+  const baseRows = readWorksheetRows(xml, "基础配置").slice(1);
+  baseRows.forEach(([field, value]) => {
+    const cleanField = String(field || "").trim();
+    const cleanValue = String(value || "").trim();
+    if (cleanField === "方案名称") next.schemeName = cleanValue || defaultRules.schemeName;
+    if (cleanField === "固定前缀") next.basePrefix = cleanValue || defaultRules.basePrefix;
+    if (cleanField === "工程名") next.projectName = cleanValue || defaultRules.projectName;
+    if (cleanField === "分隔符") next.separator = cleanValue || defaultRules.separator;
+    if (cleanField === "常用标签") next.tags = cleanValue || defaultRules.tags;
+  });
+  if (pageTerms.length) next.pageTerms = pageTerms.join("\n");
+  if (componentTerms.length) next.componentTerms = componentTerms.join("\n");
+  if (stateTerms.length) next.stateTerms = stateTerms.join("\n");
+  const filenameRules = rulesRows
+    .map(([keyword, value]) => [String(keyword || "").trim(), String(value || "").trim()])
+    .filter(([keyword, value]) => keyword && value)
+    .map(([keyword, value]) => keyword + "=" + value);
+  if (filenameRules.length) next.filenameRules = filenameRules.join("\n");
+  return next;
+}
+
+function readWorksheetValues(xml, sheetName, columnIndex) {
+  return readWorksheetRows(xml, sheetName)
+    .slice(1)
+    .map((row) => String(row[columnIndex] || "").trim())
+    .filter(Boolean);
+}
+
+function readWorksheetRows(xml, sheetName) {
+  const worksheet = [...xml.getElementsByTagName("Worksheet")].find((sheet) => sheet.getAttribute("ss:Name") === sheetName || sheet.getAttribute("Name") === sheetName);
+  if (!worksheet) return [];
+  return [...worksheet.getElementsByTagName("Row")].map((row) => [...row.getElementsByTagName("Cell")].map((cell) => {
+    const data = cell.getElementsByTagName("Data")[0];
+    return data ? data.textContent : "";
+  }));
 }
 
 function parseSchemeTemplateCsv(text) {
@@ -903,6 +1009,14 @@ function parseCsv(text) {
 function csvCell(value) {
   const text = String(value || "");
   return '"' + text.replace(/"/g, '""') + '"';
+}
+
+function xmlEscape(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
 }
 
 function renderSchemeSelect() {
