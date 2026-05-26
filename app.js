@@ -68,8 +68,12 @@ const els = {
   componentTerms: document.querySelector("#componentTerms"),
   stateTerms: document.querySelector("#stateTerms"),
   filenameRules: document.querySelector("#filenameRules"),
+  aiProvider: document.querySelector("#aiProvider"),
+  aiApiFormat: document.querySelector("#aiApiFormat"),
+  aiBaseUrl: document.querySelector("#aiBaseUrl"),
   openaiApiKey: document.querySelector("#openaiApiKey"),
   openaiModel: document.querySelector("#openaiModel"),
+  aiProviderNote: document.querySelector("#aiProviderNote"),
   exportSchemeTemplate: document.querySelector("#exportSchemeTemplate"),
   importSchemeTemplate: document.querySelector("#importSchemeTemplate"),
   prefixPreview: document.querySelector("#prefixPreview"),
@@ -194,11 +198,17 @@ function bindRules() {
     showToast("已恢复默认规则");
   });
 
-  [els.openaiApiKey, els.openaiModel].forEach((input) => {
+  [els.aiProvider, els.aiApiFormat, els.aiBaseUrl, els.openaiApiKey, els.openaiModel, els.aiProviderNote].forEach((input) => {
     input.addEventListener("input", () => {
       aiSettings = collectAiSettings();
       saveAiSettings(aiSettings);
     });
+  });
+
+  els.aiProvider.addEventListener("change", () => {
+    applyProviderPreset();
+    aiSettings = collectAiSettings();
+    saveAiSettings(aiSettings);
   });
 
   els.exportSchemeTemplate.addEventListener("click", exportSchemeTemplate);
@@ -260,40 +270,16 @@ function setRunButtonLoading(isLoading, label = "运行 AI 命名") {
 
 async function requestAiRecommendations(asset, localRecommendations) {
   const cutImageUrl = await imageFileToDataUrl(asset.file, 768);
-  const content = [
-    {
-      type: "input_text",
-      text: buildAiPrompt(asset, localRecommendations),
-    },
-    {
-      type: "input_image",
-      image_url: cutImageUrl,
-      detail: "low",
-    },
-  ];
-  if (referenceFile && isRasterImage(referenceFile)) {
-    content.push({
-      type: "input_image",
-      image_url: await imageFileToDataUrl(referenceFile, 960),
-      detail: "low",
-    });
-  }
-
-  const response = await fetch("https://api.openai.com/v1/responses", {
+  const referenceImageUrl = referenceFile && isRasterImage(referenceFile) ? await imageFileToDataUrl(referenceFile, 960) : "";
+  const prompt = buildAiPrompt(asset, localRecommendations);
+  const apiFormat = aiSettings.apiFormat || "responses";
+  const response = await fetch(buildAiEndpoint(apiFormat), {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       Authorization: "Bearer " + aiSettings.apiKey.trim(),
     },
-    body: JSON.stringify({
-      model: aiSettings.model.trim() || "gpt-4.1-mini",
-      input: [
-        {
-          role: "user",
-          content,
-        },
-      ],
-    }),
+    body: JSON.stringify(apiFormat === "chat" ? buildChatPayload(prompt, cutImageUrl, referenceImageUrl) : buildResponsesPayload(prompt, cutImageUrl, referenceImageUrl)),
   });
 
   if (!response.ok) {
@@ -302,6 +288,88 @@ async function requestAiRecommendations(asset, localRecommendations) {
   const data = await response.json();
   const text = extractResponseText(data);
   return normalizeAiNames(parseAiNames(text), localRecommendations);
+}
+
+function buildResponsesPayload(prompt, cutImageUrl, referenceImageUrl) {
+  const content = [
+    {
+      type: "input_text",
+      text: prompt,
+    },
+    {
+      type: "input_image",
+      image_url: cutImageUrl,
+      detail: "low",
+    },
+  ];
+  if (referenceImageUrl) {
+    content.push({
+      type: "input_image",
+      image_url: referenceImageUrl,
+      detail: "low",
+    });
+  }
+  return {
+    model: aiSettings.model.trim() || "gpt-4.1-mini",
+    input: [
+      {
+        role: "user",
+        content,
+      },
+    ],
+  };
+}
+
+function buildChatPayload(prompt, cutImageUrl, referenceImageUrl) {
+  const content = [
+    {
+      type: "text",
+      text: prompt,
+    },
+    {
+      type: "image_url",
+      image_url: { url: cutImageUrl, detail: "low" },
+    },
+  ];
+  if (referenceImageUrl) {
+    content.push({
+      type: "image_url",
+      image_url: { url: referenceImageUrl, detail: "low" },
+    });
+  }
+  return {
+    model: aiSettings.model.trim() || "gpt-4.1-mini",
+    messages: [
+      {
+        role: "user",
+        content,
+      },
+    ],
+  };
+}
+
+function buildAiEndpoint(apiFormat) {
+  const baseUrl = normalizeBaseUrl(aiSettings.baseUrl || "https://api.openai.com/v1");
+  if (/\/(responses|chat\/completions)$/i.test(baseUrl)) return baseUrl;
+  return baseUrl + (apiFormat === "chat" ? "/chat/completions" : "/responses");
+}
+
+function normalizeBaseUrl(value) {
+  return String(value || "").trim().replace(/\/+$/, "");
+}
+
+function applyProviderPreset() {
+  const provider = els.aiProvider.value;
+  if (provider === "openai") {
+    els.aiBaseUrl.value = "https://api.openai.com/v1";
+    els.aiApiFormat.value = "responses";
+    if (!els.openaiModel.value.trim()) els.openaiModel.value = "gpt-4.1-mini";
+    return;
+  }
+  if (provider === "compatible") {
+    els.aiApiFormat.value = "chat";
+    if (!els.aiBaseUrl.value.trim() || els.aiBaseUrl.value.includes("api.openai.com")) els.aiBaseUrl.value = "https://你的模型服务地址/v1";
+  }
 }
 
 function buildAiPrompt(asset, localRecommendations) {
@@ -321,6 +389,9 @@ function buildAiPrompt(asset, localRecommendations) {
 
 function extractResponseText(data) {
   if (data.output_text) return data.output_text;
+  const chatText = data.choices?.[0]?.message?.content;
+  if (Array.isArray(chatText)) return chatText.map((part) => part.text || "").join("\n");
+  if (typeof chatText === "string") return chatText;
   return (data.output || [])
     .flatMap((item) => item.content || [])
     .map((part) => part.text || "")
@@ -787,8 +858,12 @@ function fillRulesForm() {
 }
 
 function fillAiSettings() {
+  els.aiProvider.value = aiSettings.provider;
+  els.aiApiFormat.value = aiSettings.apiFormat;
+  els.aiBaseUrl.value = aiSettings.baseUrl;
   els.openaiApiKey.value = aiSettings.apiKey;
   els.openaiModel.value = aiSettings.model;
+  els.aiProviderNote.value = aiSettings.providerNote;
 }
 
 function exportSchemeTemplate() {
@@ -1083,21 +1158,36 @@ function saveRules(nextRules) {
 
 function collectAiSettings() {
   return {
+    provider: els.aiProvider.value || "openai",
+    apiFormat: els.aiApiFormat.value || "responses",
+    baseUrl: normalizeBaseUrl(els.aiBaseUrl.value) || "https://api.openai.com/v1",
     apiKey: els.openaiApiKey.value.trim(),
     model: els.openaiModel.value.trim() || "gpt-4.1-mini",
+    providerNote: els.aiProviderNote.value.trim(),
   };
 }
 
 function loadAiSettings() {
   try {
-    return { apiKey: "", model: "gpt-4.1-mini", ...JSON.parse(localStorage.getItem(AI_SETTINGS_KEY)) };
+    return normalizeAiSettings(JSON.parse(localStorage.getItem(AI_SETTINGS_KEY)));
   } catch {
-    return { apiKey: "", model: "gpt-4.1-mini" };
+    return normalizeAiSettings({});
   }
 }
 
 function saveAiSettings(nextSettings) {
   localStorage.setItem(AI_SETTINGS_KEY, JSON.stringify(nextSettings));
+}
+
+function normalizeAiSettings(nextSettings = {}) {
+  return {
+    provider: nextSettings.provider || "openai",
+    apiFormat: nextSettings.apiFormat || "responses",
+    baseUrl: normalizeBaseUrl(nextSettings.baseUrl || "https://api.openai.com/v1"),
+    apiKey: nextSettings.apiKey || "",
+    model: nextSettings.model || "gpt-4.1-mini",
+    providerNote: nextSettings.providerNote || "",
+  };
 }
 
 function loadSchemes() {

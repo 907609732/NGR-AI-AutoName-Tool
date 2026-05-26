@@ -104,17 +104,40 @@
             <div class="section-head compact-head">
               <div>
                 <h2>AI 接入</h2>
-                <p>填写后运行命名会调用视觉模型；留空则使用本地知识库推荐。</p>
+                <p>支持 OpenAI 官方、OpenAI 兼容平台和自定义接口；留空 API Key 时使用本地知识库推荐。</p>
               </div>
             </div>
             <div class="ai-grid">
               <label>
-                <span>OpenAI API Key</span>
+                <span>服务类型</span>
+                <select id="aiProvider">
+                  <option value="openai">OpenAI 官方</option>
+                  <option value="compatible">OpenAI 兼容平台</option>
+                  <option value="custom">自定义接口</option>
+                </select>
+              </label>
+              <label>
+                <span>接口格式</span>
+                <select id="aiApiFormat">
+                  <option value="responses">Responses API</option>
+                  <option value="chat">Chat Completions</option>
+                </select>
+              </label>
+              <label>
+                <span>API 地址</span>
+                <input id="aiBaseUrl" type="text" placeholder="https://api.openai.com/v1" />
+              </label>
+              <label>
+                <span>API Key</span>
                 <input id="openaiApiKey" type="password" placeholder="sk-..." autocomplete="off" />
               </label>
               <label>
                 <span>模型</span>
                 <input id="openaiModel" type="text" placeholder="gpt-4.1-mini" />
+              </label>
+              <label>
+                <span>服务备注</span>
+                <input id="aiProviderNote" type="text" placeholder="例如：Kimi / 通义千问 / DeepSeek / 豆包 / Claude 网关" />
               </label>
             </div>
           </div>
