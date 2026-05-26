@@ -70,19 +70,31 @@
             </div>
             <div class="knowledge-grid">
               <label>
-                <span>页面词库</span>
+                <span class="label-with-help">
+                  页面词库
+                  <button class="help-button" type="button" aria-label="页面词库说明" data-tooltip="填写常见页面英文名，例如 Home、Login、Profile。AI 和本地推荐会用它识别文件属于哪个页面。">?</button>
+                </span>
                 <textarea id="pageTerms" rows="4" placeholder="Home&#10;Login&#10;Profile&#10;Settings"></textarea>
               </label>
               <label>
-                <span>组件词库</span>
+                <span class="label-with-help">
+                  组件词库
+                  <button class="help-button" type="button" aria-label="组件词库说明" data-tooltip="填写常见切图类型，例如 BG、Button、Icon、Banner、Module。用于判断图片是背景、按钮、图标还是模块。">?</button>
+                </span>
                 <textarea id="componentTerms" rows="4" placeholder="BG&#10;Button&#10;Icon&#10;Banner&#10;Module"></textarea>
               </label>
               <label>
-                <span>状态词库</span>
+                <span class="label-with-help">
+                  状态词库
+                  <button class="help-button" type="button" aria-label="状态词库说明" data-tooltip="填写交互状态，例如 Normal、Hover、Active、Disabled。适合按钮、图标等有多状态切图的命名。">?</button>
+                </span>
                 <textarea id="stateTerms" rows="4" placeholder="Normal&#10;Hover&#10;Active&#10;Disabled"></textarea>
               </label>
               <label>
-                <span>文件名匹配规则</span>
+                <span class="label-with-help">
+                  文件名匹配规则
+                  <button class="help-button" type="button" aria-label="文件名匹配规则说明" data-tooltip="按“关键词=英文名”填写，例如 登录=Login、按钮=Button。原始中文文件名命中关键词后，会自动翻译成英文命名。">?</button>
+                </span>
                 <textarea id="filenameRules" rows="4" placeholder="首页=Home&#10;登录=Login&#10;按钮=Button&#10;悬浮=Hover"></textarea>
               </label>
             </div>

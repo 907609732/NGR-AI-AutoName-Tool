@@ -181,6 +181,79 @@ label span,
   font-weight: 650;
 }
 
+.label-with-help {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: fit-content;
+}
+
+.help-button {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  min-height: 18px;
+  padding: 0;
+  border: 1px solid #a9bbc2;
+  border-radius: 50%;
+  background: #fff;
+  color: var(--primary);
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.help-button::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 9px);
+  z-index: 20;
+  width: 260px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #1b2428;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.6;
+  text-align: left;
+  box-shadow: 0 12px 28px rgba(27, 36, 40, 0.22);
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, 4px);
+  transition: opacity 0.14s ease, transform 0.14s ease;
+}
+
+.help-button::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 3px);
+  z-index: 21;
+  width: 10px;
+  height: 10px;
+  background: #1b2428;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(-50%) rotate(45deg);
+  transition: opacity 0.14s ease;
+}
+
+.help-button:hover::after,
+.help-button:focus-visible::after,
+.help-button:hover::before,
+.help-button:focus-visible::before {
+  opacity: 1;
+}
+
+.help-button:hover::after,
+.help-button:focus-visible::after {
+  transform: translate(-50%, 0);
+}
+
 input,
 textarea,
 select {
