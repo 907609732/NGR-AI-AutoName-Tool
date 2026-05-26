@@ -1,5 +1,6 @@
 const STORAGE_KEY = "ngr-ai-autoname-rules";
 const SCHEME_KEY = "ngr-ai-autoname-rule-schemes";
+const AI_SETTINGS_KEY = "ngr-ai-autoname-ai-settings";
 const IMAGE_TYPES = ["image/png", "image/jpeg", "image/webp", "image/gif", "image/svg+xml"];
 
 const defaultRules = {
@@ -40,8 +41,10 @@ const builtinTranslations = {
 
 let rules = loadRules();
 let schemes = loadSchemes();
+let aiSettings = loadAiSettings();
 let assets = [];
 let selectedId = null;
+let referenceFile = null;
 let toastTimer = null;
 
 const els = {
@@ -65,6 +68,8 @@ const els = {
   componentTerms: document.querySelector("#componentTerms"),
   stateTerms: document.querySelector("#stateTerms"),
   filenameRules: document.querySelector("#filenameRules"),
+  openaiApiKey: document.querySelector("#openaiApiKey"),
+  openaiModel: document.querySelector("#openaiModel"),
   prefixPreview: document.querySelector("#prefixPreview"),
   saveRules: document.querySelector("#saveRules"),
   saveAsScheme: document.querySelector("#saveAsScheme"),
@@ -94,6 +99,7 @@ function init() {
   bindUploads();
   bindEditor();
   fillRulesForm();
+  fillAiSettings();
   upsertScheme(rules);
   renderSchemeSelect();
   updateRulePreview();
@@ -185,6 +191,13 @@ function bindRules() {
     renderAssetList();
     showToast("已恢复默认规则");
   });
+
+  [els.openaiApiKey, els.openaiModel].forEach((input) => {
+    input.addEventListener("input", () => {
+      aiSettings = collectAiSettings();
+      saveAiSettings(aiSettings);
+    });
+  });
 }
 
 function bindUploads() {
@@ -193,6 +206,7 @@ function bindUploads() {
   els.referenceInput.addEventListener("change", (event) => {
     const file = event.target.files[0];
     if (!file) return;
+    referenceFile = file;
     els.referencePreview.src = URL.createObjectURL(file);
     els.referenceName.textContent = file.name;
     els.referencePreviewWrap.classList.remove("hidden");
@@ -201,49 +215,192 @@ function bindUploads() {
 }
 
 function bindEditor() {
-  els.runNaming.addEventListener("click", () => {
+  els.runNaming.addEventListener("click", runNaming);
+  els.applySuffix.addEventListener("click", applyBatchSuffix);
+  els.removeSelected.addEventListener("click", removeSelectedAssets);
+  els.exportFiles.addEventListener("click", exportRenamedFiles);
+}
+
+async function runNaming() {
     if (!assets.length) {
       showToast("请先上传切图文件");
       return;
     }
-    assets = assets.map((asset) => {
-      const recommendations = makeRecommendations(asset);
-      return {
-        ...asset,
-        recommendations,
-        finalBaseName: asset.finalBaseName || recommendations[0],
-      };
-    });
-    renderAssetList();
-    showToast("已为 " + assets.length + " 张图片生成推荐名称");
-  });
-
-  els.applySuffix.addEventListener("click", () => {
-    const suffix = sanitizeName(els.batchSuffix.value);
-    if (!suffix) {
-      showToast("请先输入要追加的后缀");
-      return;
+    const apiKey = aiSettings.apiKey.trim();
+    setRunButtonLoading(true, "AI 命名中 0/" + assets.length);
+    for (let index = 0; index < assets.length; index += 1) {
+      const asset = assets[index];
+      const localRecommendations = makeRecommendations(asset);
+      let recommendations = localRecommendations;
+      if (apiKey) {
+        try {
+          recommendations = await requestAiRecommendations(asset, localRecommendations);
+        } catch (error) {
+          recommendations = localRecommendations;
+        }
+      }
+      asset.recommendations = recommendations.length ? recommendations : localRecommendations;
+      asset.finalBaseName = asset.finalBaseName || asset.recommendations[0];
+      setRunButtonLoading(true, "AI 命名中 " + (index + 1) + "/" + assets.length);
+      renderAssetList();
     }
-    const selected = assets.filter((asset) => asset.checked);
-    const targets = selected.length ? selected : assets;
-    targets.forEach((asset) => {
-      const base = asset.finalBaseName || makeRecommendations(asset)[0];
-      asset.finalBaseName = appendPart(base, suffix);
+    setRunButtonLoading(false);
+    showToast(apiKey ? "AI 推荐命名已完成" : "已使用本地知识库生成推荐名称");
+}
+
+function setRunButtonLoading(isLoading, label = "运行 AI 命名") {
+  els.runNaming.disabled = isLoading;
+  els.runNaming.textContent = label;
+}
+
+async function requestAiRecommendations(asset, localRecommendations) {
+  const cutImageUrl = await imageFileToDataUrl(asset.file, 768);
+  const content = [
+    {
+      type: "input_text",
+      text: buildAiPrompt(asset, localRecommendations),
+    },
+    {
+      type: "input_image",
+      image_url: cutImageUrl,
+      detail: "low",
+    },
+  ];
+  if (referenceFile && isRasterImage(referenceFile)) {
+    content.push({
+      type: "input_image",
+      image_url: await imageFileToDataUrl(referenceFile, 960),
+      detail: "low",
     });
-    renderAssetList();
-    showToast("已更新 " + targets.length + " 张图片");
+  }
+
+  const response = await fetch("https://api.openai.com/v1/responses", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: "Bearer " + aiSettings.apiKey.trim(),
+    },
+    body: JSON.stringify({
+      model: aiSettings.model.trim() || "gpt-4.1-mini",
+      input: [
+        {
+          role: "user",
+          content,
+        },
+      ],
+    }),
   });
 
-  els.removeSelected.addEventListener("click", () => {
-    const targetIds = assets.filter((asset) => asset.checked || asset.id === selectedId).map((asset) => asset.id);
-    if (!targetIds.length) return;
-    assets = assets.filter((asset) => !targetIds.includes(asset.id));
-    if (!assets.some((asset) => asset.id === selectedId)) selectedId = assets[0]?.id || null;
-    renderAssetList();
-    showToast("已删除选中的图片");
-  });
+  if (!response.ok) {
+    throw new Error("AI request failed");
+  }
+  const data = await response.json();
+  const text = extractResponseText(data);
+  return normalizeAiNames(parseAiNames(text), localRecommendations);
+}
 
-  els.exportFiles.addEventListener("click", exportRenamedFiles);
+function buildAiPrompt(asset, localRecommendations) {
+  return [
+    "你是 UI 切图命名助手。请根据切图图片、参考效果图、原始文件名和团队命名知识库，生成 2 到 5 个英文语义名称。",
+    "只返回 JSON，格式为：{\"names\":[\"Login_Button_Hover\",\"Home_BG\"]}。",
+    "不要包含固定前缀、工程名、文件扩展名。名称只允许英文字母、数字和下划线，使用 Pascal/Title 英文词组并以下划线连接。",
+    "原始文件名：" + asset.originalBase + asset.extension,
+    "当前前缀：" + buildPrefix(),
+    "本地候选：" + localRecommendations.join(", "),
+    "页面词库：" + parseList(rules.pageTerms).join(", "),
+    "组件词库：" + parseList(rules.componentTerms).join(", "),
+    "状态词库：" + parseList(rules.stateTerms).join(", "),
+    "文件名匹配规则：" + parseFilenameRules(rules.filenameRules).map((rule) => rule.keyword + "=" + rule.value).join(", "),
+  ].join("\n");
+}
+
+function extractResponseText(data) {
+  if (data.output_text) return data.output_text;
+  return (data.output || [])
+    .flatMap((item) => item.content || [])
+    .map((part) => part.text || "")
+    .join("\n");
+}
+
+function parseAiNames(text) {
+  const raw = String(text || "").trim();
+  try {
+    const parsed = JSON.parse(raw.replace(/^```json\s*/i, "").replace(/```$/i, "").trim());
+    if (Array.isArray(parsed.names)) return parsed.names;
+  } catch {
+    // Fall through to line-based parsing.
+  }
+  return raw
+    .split(/[\n,，]/)
+    .map((item) => item.replace(/^[-*\d.]+/, "").trim())
+    .filter(Boolean);
+}
+
+function normalizeAiNames(names, fallback) {
+  const normalized = names
+    .map((name) => sanitizeName(name))
+    .filter(Boolean)
+    .filter((name) => /^[A-Za-z0-9_]+$/.test(name));
+  return [...new Set(normalized)].slice(0, 5).length ? [...new Set(normalized)].slice(0, 5) : fallback;
+}
+
+async function imageFileToDataUrl(file, maxSide) {
+  if (!isRasterImage(file)) {
+    throw new Error("Unsupported image type for AI");
+  }
+  const originalUrl = URL.createObjectURL(file);
+  try {
+    const image = await loadImage(originalUrl);
+    const scale = Math.min(1, maxSide / Math.max(image.naturalWidth, image.naturalHeight));
+    const width = Math.max(1, Math.round(image.naturalWidth * scale));
+    const height = Math.max(1, Math.round(image.naturalHeight * scale));
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const context = canvas.getContext("2d");
+    context.drawImage(image, 0, 0, width, height);
+    return canvas.toDataURL("image/jpeg", 0.82);
+  } finally {
+    URL.revokeObjectURL(originalUrl);
+  }
+}
+
+function loadImage(url) {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => resolve(image);
+    image.onerror = reject;
+    image.src = url;
+  });
+}
+
+function isRasterImage(file) {
+  return /image\/(png|jpeg|jpg|webp)/i.test(file.type) || /\.(png|jpe?g|webp)$/i.test(file.name);
+}
+
+function applyBatchSuffix() {
+  const suffix = sanitizeName(els.batchSuffix.value);
+  if (!suffix) {
+    showToast("请先输入要追加的后缀");
+    return;
+  }
+  const selected = assets.filter((asset) => asset.checked);
+  const targets = selected.length ? selected : assets;
+  targets.forEach((asset) => {
+    const base = asset.finalBaseName || makeRecommendations(asset)[0];
+    asset.finalBaseName = appendPart(base, suffix);
+  });
+  renderAssetList();
+  showToast("已更新 " + targets.length + " 张图片");
+}
+
+function removeSelectedAssets() {
+  const targetIds = assets.filter((asset) => asset.checked || asset.id === selectedId).map((asset) => asset.id);
+  if (!targetIds.length) return;
+  assets = assets.filter((asset) => !targetIds.includes(asset.id));
+  if (!assets.some((asset) => asset.id === selectedId)) selectedId = assets[0]?.id || null;
+  renderAssetList();
+  showToast("已删除选中的图片");
 }
 
 async function addFiles(files) {
@@ -624,6 +781,11 @@ function fillRulesForm() {
   els.filenameRules.value = rules.filenameRules;
 }
 
+function fillAiSettings() {
+  els.openaiApiKey.value = aiSettings.apiKey;
+  els.openaiModel.value = aiSettings.model;
+}
+
 function renderSchemeSelect() {
   els.schemeSelect.innerHTML = "";
   schemes.forEach((scheme) => {
@@ -684,6 +846,25 @@ function loadRules() {
 
 function saveRules(nextRules) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(nextRules));
+}
+
+function collectAiSettings() {
+  return {
+    apiKey: els.openaiApiKey.value.trim(),
+    model: els.openaiModel.value.trim() || "gpt-4.1-mini",
+  };
+}
+
+function loadAiSettings() {
+  try {
+    return { apiKey: "", model: "gpt-4.1-mini", ...JSON.parse(localStorage.getItem(AI_SETTINGS_KEY)) };
+  } catch {
+    return { apiKey: "", model: "gpt-4.1-mini" };
+  }
+}
+
+function saveAiSettings(nextSettings) {
+  localStorage.setItem(AI_SETTINGS_KEY, JSON.stringify(nextSettings));
 }
 
 function loadSchemes() {

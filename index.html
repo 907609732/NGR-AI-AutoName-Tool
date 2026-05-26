@@ -88,6 +88,25 @@
             </div>
           </div>
 
+          <div class="knowledge-panel ai-panel">
+            <div class="section-head compact-head">
+              <div>
+                <h2>AI 接入</h2>
+                <p>填写后运行命名会调用视觉模型；留空则使用本地知识库推荐。</p>
+              </div>
+            </div>
+            <div class="ai-grid">
+              <label>
+                <span>OpenAI API Key</span>
+                <input id="openaiApiKey" type="password" placeholder="sk-..." autocomplete="off" />
+              </label>
+              <label>
+                <span>模型</span>
+                <input id="openaiModel" type="text" placeholder="gpt-4.1-mini" />
+              </label>
+            </div>
+          </div>
+
           <div class="preview-line">
             <span>命名预览</span>
             <strong id="prefixPreview">T_UI_工程名_AI自动生成名称</strong>

@@ -247,6 +247,17 @@ select:focus {
   gap: 16px;
 }
 
+.ai-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(180px, 0.6fr);
+  gap: 16px;
+}
+
+button:disabled {
+  cursor: progress;
+  opacity: 0.72;
+}
+
 .preview-line span {
   color: var(--muted);
 }
@@ -568,6 +579,7 @@ select:focus {
   .home-view.active,
   .rules-grid,
   .knowledge-grid,
+  .ai-grid,
   .upload-grid,
   .workspace,
   .batch-tools {
