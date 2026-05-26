@@ -22,11 +22,13 @@ const builtinSchemes = [
   {
     ...defaultRules,
     schemeName: "NGR命名规范",
+    projectName: "NGR",
     contextDocs: "该项目由驼峰命名规则首字母大写。命名应优先使用英文 Pascal Case 词组，并用下划线连接，例如 Home_Button_Normal。",
   },
   {
     ...defaultRules,
     schemeName: "yysls命名规范",
+    projectName: "yysls",
     tags: "BG, Button, Hover, Normal, Icon, Module, Pinyin",
     filenameRules: defaultRules.filenameRules + "\n按钮=AnNiu\n背景=BeiJing\n图标=TuBiao\n首页=ShouYe\n登录=DengLu",
     contextDocs: "该项目命名规范带中英混合，有拼音命名。遇到团队特殊词可保留拼音或中英混合表达。",
@@ -34,6 +36,7 @@ const builtinSchemes = [
   {
     ...defaultRules,
     schemeName: "更多项目正在持续开发中",
+    projectName: "More",
     contextDocs: "占位项目配置。后续可以复制或修改为新的项目命名规范。",
   },
 ];
@@ -150,6 +153,7 @@ function init() {
   saveProjects();
   renderProjectSelect();
   renderSchemeSelect();
+  syncWorkProjectFields();
   updateRulePreview();
   updateActiveRuleText();
 }
@@ -281,7 +285,9 @@ function switchScheme(schemeName) {
   rules = normalizeLoadedRules({ ...defaultRules, ...selected });
   saveRules(rules);
   fillRulesForm();
+  renderProjectSelect();
   renderSchemeSelect();
+  syncWorkProjectFields();
   updateRulePreview();
   updateActiveRuleText();
   renderAssetList();
@@ -312,6 +318,7 @@ function createProject() {
   fillRulesForm();
   renderProjectSelect();
   renderSchemeSelect();
+  syncWorkProjectFields();
   updateRulePreview();
   updateActiveRuleText();
   renderAssetList();
@@ -326,10 +333,12 @@ function switchProject(projectId) {
   schemes = nextProject.schemes.length ? nextProject.schemes : [normalizeLoadedRules({ ...defaultRules })];
   nextProject.schemes = schemes;
   rules = normalizeLoadedRules({ ...defaultRules, ...schemes[0] });
+  saveProjects();
   saveRules(rules);
   fillRulesForm();
   renderProjectSelect();
   renderSchemeSelect();
+  syncWorkProjectFields();
   updateRulePreview();
   updateActiveRuleText();
   renderAssetList();
@@ -355,7 +364,9 @@ function deleteCurrentScheme() {
   saveProjects();
   saveRules(rules);
   fillRulesForm();
+  renderProjectSelect();
   renderSchemeSelect();
+  syncWorkProjectFields();
   updateRulePreview();
   updateActiveRuleText();
   renderAssetList();
@@ -377,6 +388,7 @@ function deleteCurrentProject() {
   fillRulesForm();
   renderProjectSelect();
   renderSchemeSelect();
+  syncWorkProjectFields();
   updateRulePreview();
   updateActiveRuleText();
   renderAssetList();
@@ -1455,6 +1467,15 @@ function renderProjectSelect() {
   });
 }
 
+function syncWorkProjectFields() {
+  const project = getActiveProject();
+  if (els.projectSelect.value !== activeProjectId) els.projectSelect.value = activeProjectId;
+  if (els.workProjectSelect.value !== activeProjectId) els.workProjectSelect.value = activeProjectId;
+  els.projectConfigName.value = project.name;
+  els.projectConfigDescription.value = project.description || "";
+  els.workProjectName.value = rules.projectName;
+}
+
 function buildPrefix() {
   const separator = rules.separator || "_";
   return [sanitizeName(rules.basePrefix), sanitizeName(rules.projectName), ""].join(separator);
@@ -1564,17 +1585,50 @@ function saveSchemes(nextSchemes) {
 function loadProjects() {
   try {
     const saved = JSON.parse(localStorage.getItem(PROJECTS_KEY));
-    if (Array.isArray(saved) && saved.length) return normalizeProjects(saved);
+    if (Array.isArray(saved) && saved.length) {
+      const savedProjects = normalizeProjects(saved);
+      return savedProjects.length ? savedProjects : normalizeProjects(buildBuiltinProjects());
+    }
   } catch {
     // Rebuild projects below.
   }
-  return normalizeProjects([
-    {
-      id: "default",
-      name: "默认项目",
-      description: "通用项目配置",
-      schemes: loadSchemes(),
-    },
+  return normalizeProjects(buildBuiltinProjects());
+}
+
+function normalizeProjects(nextProjects) {
+  return nextProjects
+    .filter((project) => project && project.id !== "default" && project.name !== "默认项目")
+    .map((project, index) => ({
+      id: project.id || "project-" + index + "-" + Date.now(),
+      name: project.name || "未命名项目",
+      description: project.description || "",
+      schemes: normalizeProjectSchemes(project.name, ensureBuiltinSchemeForProject(project.name, (project.schemes || []).map((scheme) => normalizeLoadedRules(scheme)))),
+    }));
+}
+
+function ensureBuiltinSchemeForProject(projectName, nextSchemes) {
+  const match = builtinSchemes.find((scheme) => projectName.includes("NGR") && scheme.schemeName === "NGR命名规范" || projectName.includes("yysls") && scheme.schemeName === "yysls命名规范" || projectName.includes("更多") && scheme.schemeName === "更多项目正在持续开发中");
+  if (match && !nextSchemes.some((scheme) => scheme.schemeName === match.schemeName)) nextSchemes.push(normalizeLoadedRules(match));
+  return nextSchemes.length ? nextSchemes : [normalizeLoadedRules({ ...defaultRules })];
+}
+
+function normalizeProjectSchemes(projectName, nextSchemes) {
+  const defaultProjectName = getDefaultProjectName(projectName);
+  return nextSchemes.map((scheme) => ({
+    ...scheme,
+    projectName: scheme.projectName === defaultRules.projectName ? defaultProjectName : scheme.projectName,
+  }));
+}
+
+function getDefaultProjectName(projectName) {
+  if (projectName.includes("NGR")) return "NGR";
+  if (projectName.includes("yysls")) return "yysls";
+  if (projectName.includes("更多")) return "More";
+  return sanitizeName(projectName) || defaultRules.projectName;
+}
+
+function buildBuiltinProjects() {
+  return [
     {
       id: "ngr",
       name: "NGR",
@@ -1601,27 +1655,14 @@ function loadProjects() {
       description: "更多项目正在持续开发中",
       schemes: [builtinSchemes[2]],
     },
-  ]);
-}
-
-function normalizeProjects(nextProjects) {
-  return nextProjects.map((project, index) => ({
-    id: project.id || "project-" + index + "-" + Date.now(),
-    name: project.name || "未命名项目",
-    description: project.description || "",
-    schemes: ensureBuiltinSchemeForProject(project.name, (project.schemes || []).map((scheme) => normalizeLoadedRules(scheme))),
-  }));
-}
-
-function ensureBuiltinSchemeForProject(projectName, nextSchemes) {
-  const match = builtinSchemes.find((scheme) => projectName.includes("NGR") && scheme.schemeName === "NGR命名规范" || projectName.includes("yysls") && scheme.schemeName === "yysls命名规范" || projectName.includes("更多") && scheme.schemeName === "更多项目正在持续开发中");
-  if (match && !nextSchemes.some((scheme) => scheme.schemeName === match.schemeName)) nextSchemes.push(normalizeLoadedRules(match));
-  return nextSchemes.length ? nextSchemes : [normalizeLoadedRules({ ...defaultRules })];
+  ];
 }
 
 function loadActiveProjectId(nextProjects) {
   const saved = localStorage.getItem(ACTIVE_PROJECT_KEY);
-  return nextProjects.some((project) => project.id === saved) ? saved : nextProjects[0].id;
+  if (saved && saved !== "default" && nextProjects.some((project) => project.id === saved)) return saved;
+  const ngrProject = nextProjects.find((project) => project.id === "ngr" || project.name === "NGR");
+  return ngrProject ? ngrProject.id : nextProjects[0].id;
 }
 
 function getActiveProject() {
