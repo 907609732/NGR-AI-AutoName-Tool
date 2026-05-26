@@ -611,16 +611,15 @@ function renderAssetList() {
 
     const text = document.createElement("div");
     text.className = "asset-meta";
-    const title = document.createElement("strong");
-    title.textContent = asset.originalBase;
-    const subtitle = document.createElement("span");
-    subtitle.textContent = asset.finalBaseName ? buildExportName(asset) : "待命名";
+    const beforeName = createMetaLine("修改前名称", asset.originalBase + asset.extension);
+    const afterName = createMetaLine("修改后名称", asset.finalBaseName ? buildExportName(asset) : "待命名");
+    const resolution = createMetaLine("分辨率", formatResolution(asset.dimensions));
     const status = document.createElement("span");
     status.className = "status-badge status-" + getAssetStatus(asset);
     status.textContent = getAssetStatusText(asset);
     const statusHint = document.createElement("em");
     statusHint.textContent = asset.statusMessage || "";
-    text.append(title, subtitle, status, statusHint);
+    text.append(beforeName, afterName, resolution, status, statusHint);
 
     const editor = document.createElement("div");
     editor.className = "inline-editor";
@@ -665,7 +664,7 @@ function renderAssetList() {
     finalInput.placeholder = "请选择推荐名称或手动输入";
     finalInput.addEventListener("input", () => {
       asset.finalBaseName = sanitizeName(finalInput.value);
-      subtitle.textContent = asset.finalBaseName ? buildExportName(asset) : "待命名";
+      afterName.querySelector("strong").textContent = asset.finalBaseName ? buildExportName(asset) : "待命名";
     });
     finalLabel.append(finalText, finalInput);
 
@@ -673,6 +672,22 @@ function renderAssetList() {
     row.append(checkbox, img, text, editor);
     els.assetList.appendChild(row);
   });
+}
+
+function createMetaLine(label, value) {
+  const line = document.createElement("div");
+  line.className = "meta-line";
+  const labelNode = document.createElement("span");
+  labelNode.textContent = label;
+  const valueNode = document.createElement("strong");
+  valueNode.textContent = value;
+  line.append(labelNode, valueNode);
+  return line;
+}
+
+function formatResolution(dimensions) {
+  if (!dimensions?.width || !dimensions?.height) return "无法读取";
+  return dimensions.width + " x " + dimensions.height;
 }
 
 function getAssetStatus(asset) {
