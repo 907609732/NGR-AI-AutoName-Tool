@@ -133,6 +133,7 @@ main {
   flex-wrap: wrap;
   color: var(--muted);
   font-size: 13px;
+  line-height: 1.5;
 }
 
 .signature span {
@@ -148,6 +149,18 @@ main {
 
 .signature a:hover {
   text-decoration: underline;
+}
+
+.signature p {
+  width: 100%;
+  margin: 0;
+  text-align: center;
+}
+
+.page-signature {
+  margin-top: 24px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
 }
 
 .home-view.active {
