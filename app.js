@@ -82,7 +82,6 @@ const ngrTrainingKnowledge = {
     "VX=VFX"
   ].join("\n"),
   contextDocs: [
-    "NGR 历史切图训练数据：来自 /Users/chenyuecai/Downloads/Modules，共分析 11727 张历史切图文件。Modules 文件夹和各模块目录只代表工程名来源，不参与 AI 生成语义名。",
     "命名结构固定为：T_UI_用户填写工程名_AI生成语义名。工程名只能来自用户填写的当前界面工程名，不能由 AI 从历史模块名自动生成。",
     "历史命名常见结构：T_UI_Img_工程名_语义_状态、T_UI_Icon_工程名_动作、T_UI_Bg_工程名_用途。Img/Icon/Bg/Btn/Line/Mask/Frame/Light/Tab 等词可作为内容语义参考。",
     "图片尺寸规律：64x64、128x128、256x256、512x512 多为 Icon/Badge；宽高比大于 3 且高度较小多为 Line/Bar/Progress；3440x1440、2048x1024、1024x512 等大图优先视为 BG/MainBg/PanelBg；方形大图常见 Mask、Frame、Badge、AvatarMask。",
@@ -2053,7 +2052,7 @@ function mergeContextText(currentText, incomingText) {
   const current = String(currentText || "").trim();
   const incoming = String(incomingText || "").trim();
   if (!current) return incoming;
-  if (current.includes("NGR 历史切图训练数据")) return current;
+  if (current.includes("命名结构固定为：T_UI_用户填写工程名_AI生成语义名")) return current;
   return current + "\n\n" + incoming;
 }
 
