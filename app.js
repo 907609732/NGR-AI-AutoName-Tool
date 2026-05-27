@@ -3,6 +3,8 @@ const SCHEME_KEY = "ngr-ai-autoname-rule-schemes";
 const PROJECTS_KEY = "ngr-ai-autoname-projects";
 const ACTIVE_PROJECT_KEY = "ngr-ai-autoname-active-project";
 const AI_SETTINGS_KEY = "ngr-ai-autoname-ai-settings";
+const DETECTION_PROFILES_KEY = "ngr-ai-autoname-detection-profiles";
+const ACTIVE_DETECTION_PROFILE_KEY = "ngr-ai-autoname-active-detection-profile";
 const IMAGE_TYPES = ["image/png", "image/jpeg", "image/webp", "image/gif", "image/svg+xml"];
 const NGR_TRAINING_VERSION = 4;
 const FORBIDDEN_NAMING_TERMS = ["module", "modules"];
@@ -162,11 +164,15 @@ let schemes = getActiveProject().schemes;
 let rules = normalizeLoadedRules({ ...defaultRules, ...getProjectActiveScheme(getActiveProject()) });
 let aiSettings = loadAiSettings();
 let assets = [];
+let detectionProfiles = loadDetectionProfiles();
+let activeDetectionProfileId = loadActiveDetectionProfileId(detectionProfiles);
+let detectionAssets = [];
 let selectedId = null;
 let referenceFile = null;
 let namingController = null;
 let stopRequested = false;
 let showProblemOnly = false;
+let showDetectionProblemOnly = false;
 let toastTimer = null;
 
 const els = {
@@ -176,9 +182,11 @@ const els = {
     home: document.querySelector("#homeView"),
     rules: document.querySelector("#rulesView"),
     work: document.querySelector("#workView"),
+    detect: document.querySelector("#detectView"),
   },
   rulesEntry: document.querySelector("#rulesEntry"),
   workEntry: document.querySelector("#workEntry"),
+  detectEntry: document.querySelector("#detectEntry"),
   projectSelect: document.querySelector("#projectSelect"),
   projectConfigName: document.querySelector("#projectConfigName"),
   projectConfigDescription: document.querySelector("#projectConfigDescription"),
@@ -231,6 +239,24 @@ const els = {
   applySuffix: document.querySelector("#applySuffix"),
   problemFilter: document.querySelector("#problemFilter"),
   removeSelected: document.querySelector("#removeSelected"),
+  detectionProfileSelect: document.querySelector("#detectionProfileSelect"),
+  detectionProfileName: document.querySelector("#detectionProfileName"),
+  detectionMaxSide: document.querySelector("#detectionMaxSide"),
+  detectionBgWidth: document.querySelector("#detectionBgWidth"),
+  detectionBgHeight: document.querySelector("#detectionBgHeight"),
+  detectionLargeThreshold: document.querySelector("#detectionLargeThreshold"),
+  detectionLargeMultiple: document.querySelector("#detectionLargeMultiple"),
+  detectionAtlasMultiple: document.querySelector("#detectionAtlasMultiple"),
+  saveDetectionProfile: document.querySelector("#saveDetectionProfile"),
+  newDetectionProfile: document.querySelector("#newDetectionProfile"),
+  deleteDetectionProfile: document.querySelector("#deleteDetectionProfile"),
+  detectionDropZone: document.querySelector("#detectionDropZone"),
+  detectionFolderInput: document.querySelector("#detectionFolderInput"),
+  detectionSingleInput: document.querySelector("#detectionSingleInput"),
+  detectionProblemFilter: document.querySelector("#detectionProblemFilter"),
+  clearDetectionAssets: document.querySelector("#clearDetectionAssets"),
+  detectionCount: document.querySelector("#detectionCount"),
+  detectionList: document.querySelector("#detectionList"),
   toast: document.querySelector("#toast"),
 };
 
@@ -241,12 +267,16 @@ function init() {
   bindRules();
   bindUploads();
   bindEditor();
+  bindDetection();
   fillRulesForm();
+  fillDetectionProfileForm();
   fillAiSettings();
   upsertScheme(rules, false);
   saveProjects();
   renderProjectSelect();
   renderSchemeSelect();
+  renderDetectionProfileSelect();
+  renderDetectionList();
   syncWorkProjectFields();
   updateRulePreview();
   updateActiveRuleText();
@@ -255,6 +285,7 @@ function init() {
 function bindNavigation() {
   els.rulesEntry.addEventListener("click", () => showView("rules"));
   els.workEntry.addEventListener("click", () => showView("work"));
+  els.detectEntry.addEventListener("click", () => showView("detect"));
   els.backButton.addEventListener("click", () => showView("home"));
 }
 
@@ -265,6 +296,7 @@ function showView(name) {
     home: "批量整理 UI 切图名称，让文件名保持统一、清楚、可追踪。",
     rules: "配置全局命名前缀、分隔符与通用标签。工程名可在开始命名页按当前界面填写。",
     work: "填写当前界面工程名，上传切图后可在每张图片旁边直接改名。",
+    detect: "上传切图文件夹，按项目组规则检测分辨率是否符合规范。",
   };
   els.pageHint.textContent = hints[name];
 }
@@ -525,6 +557,53 @@ function bindUploads() {
     els.referenceName.textContent = file.name;
     els.referencePreviewWrap.classList.remove("hidden");
     showToast("参考效果图已载入");
+  });
+}
+
+function bindDetection() {
+  els.detectionFolderInput.addEventListener("change", (event) => addDetectionFiles([...event.target.files]));
+  els.detectionSingleInput.addEventListener("change", (event) => addDetectionFiles([...event.target.files]));
+  ["dragenter", "dragover"].forEach((eventName) => {
+    els.detectionDropZone.addEventListener(eventName, (event) => {
+      event.preventDefault();
+      els.detectionDropZone.classList.add("drag-over");
+    });
+  });
+  ["dragleave", "drop"].forEach((eventName) => {
+    els.detectionDropZone.addEventListener(eventName, (event) => {
+      event.preventDefault();
+      if (eventName === "drop") return;
+      els.detectionDropZone.classList.remove("drag-over");
+    });
+  });
+  els.detectionDropZone.addEventListener("drop", async (event) => {
+    els.detectionDropZone.classList.remove("drag-over");
+    const files = await collectDroppedFiles(event.dataTransfer);
+    addDetectionFiles(files);
+  });
+  els.detectionProfileSelect.addEventListener("change", () => {
+    activeDetectionProfileId = els.detectionProfileSelect.value;
+    localStorage.setItem(ACTIVE_DETECTION_PROFILE_KEY, activeDetectionProfileId);
+    fillDetectionProfileForm();
+    revalidateDetectionAssets();
+  });
+  [els.detectionProfileName, els.detectionMaxSide, els.detectionBgWidth, els.detectionBgHeight, els.detectionLargeThreshold, els.detectionLargeMultiple, els.detectionAtlasMultiple].forEach((input) => {
+    input.addEventListener("input", () => {
+      updateActiveDetectionProfile(collectDetectionProfileForm(), false);
+      revalidateDetectionAssets();
+    });
+  });
+  els.saveDetectionProfile.addEventListener("click", () => {
+    updateActiveDetectionProfile(collectDetectionProfileForm(), true);
+    showToast("检测参数已保存");
+  });
+  els.newDetectionProfile.addEventListener("click", createDetectionProfile);
+  els.deleteDetectionProfile.addEventListener("click", deleteDetectionProfile);
+  els.detectionProblemFilter.addEventListener("click", toggleDetectionProblemFilter);
+  els.clearDetectionAssets.addEventListener("click", () => {
+    detectionAssets = [];
+    renderDetectionList();
+    showToast("检测列表已清空");
   });
 }
 
@@ -931,6 +1010,13 @@ function toggleProblemFilter() {
   renderAssetList();
 }
 
+function toggleDetectionProblemFilter() {
+  showDetectionProblemOnly = !showDetectionProblemOnly;
+  els.detectionProblemFilter.textContent = showDetectionProblemOnly ? "显示全部图片" : "只看问题图片";
+  els.detectionProblemFilter.setAttribute("aria-pressed", String(showDetectionProblemOnly));
+  renderDetectionList();
+}
+
 async function addFiles(files) {
   const imageFiles = files.filter(isSupportedImage);
   if (!imageFiles.length) {
@@ -957,6 +1043,28 @@ async function addFiles(files) {
   } else {
     showToast("已载入 " + loadedCount + " 张切图");
   }
+}
+
+async function addDetectionFiles(files) {
+  const imageFiles = files.filter(isSupportedImage);
+  if (!imageFiles.length) {
+    showToast("未发现可检测的图片文件");
+    return;
+  }
+
+  const additions = await Promise.all(imageFiles.map(fileToDetectionAsset));
+  const seen = new Set(detectionAssets.map((asset) => asset.key));
+  let loadedCount = 0;
+  let issueCount = 0;
+  additions.forEach((asset) => {
+    if (seen.has(asset.key)) return;
+    detectionAssets.push(asset);
+    seen.add(asset.key);
+    loadedCount += 1;
+    if (asset.hasIssue) issueCount += 1;
+  });
+  renderDetectionList();
+  showToast(issueCount ? "已检测 " + loadedCount + " 张，其中 " + issueCount + " 张有问题" : "已检测 " + loadedCount + " 张，全部通过");
 }
 
 function isSupportedImage(file) {
@@ -989,6 +1097,62 @@ async function fileToAsset(file) {
     customPrefix: "",
     namingStatus: "idle",
     statusMessage: "",
+  };
+}
+
+async function fileToDetectionAsset(file) {
+  const url = URL.createObjectURL(file);
+  const dimensions = await readImageDimensions(url).catch(() => ({ width: 0, height: 0 }));
+  const result = validateDetectionDimensions(dimensions, getActiveDetectionProfile(), file.webkitRelativePath || file.name);
+  const id = crypto.randomUUID ? crypto.randomUUID() : Date.now() + "-" + Math.random();
+  const key = (file.webkitRelativePath || file.name) + "-" + file.size + "-" + file.lastModified;
+  return {
+    id,
+    key,
+    file,
+    url,
+    name: file.webkitRelativePath || file.name,
+    dimensions,
+    ...result,
+  };
+}
+
+function validateDetectionDimensions(dimensions, profile, fileName = "") {
+  const { width, height } = dimensions || {};
+  if (!width || !height) {
+    return { hasIssue: true, label: "无法读取", messages: ["无法读取图片分辨率"] };
+  }
+  const config = normalizeDetectionProfile(profile);
+  const maxSide = Math.max(width, height);
+  const messages = [];
+  const isBackground = width === config.backgroundWidth && height === config.backgroundHeight;
+  const isBackgroundName = /(^|[_\-\s])(bg|background)([_\-\s]|$)|背景|底图/i.test(fileName);
+  let label = isBackground ? "背景图" : maxSide > config.largeThreshold ? "大图" : "图集";
+
+  if (width % 2 !== 0 || height % 2 !== 0) {
+    messages.push("分辨率不是双数，不允许单数");
+  }
+  if (maxSide > config.maxSide && !isBackground) {
+    messages.push("分辨率单边不能超过" + config.maxSide);
+  }
+  if (isBackgroundName && !isBackground) {
+    messages.push("背景图规范分辨率是" + config.backgroundWidth + "x" + config.backgroundHeight);
+  }
+  if (isBackground) {
+    label = "背景图";
+  } else if (maxSide > config.largeThreshold) {
+    label = "大图";
+    if (width % config.largeMultiple !== 0 || height % config.largeMultiple !== 0) {
+      messages.push("单边超过" + config.largeThreshold + "的大图需要是" + config.largeMultiple + "的倍数");
+    }
+  } else if (width % config.atlasMultiple !== 0 || height % config.atlasMultiple !== 0) {
+    messages.push(config.largeThreshold + "以下图集需要是" + config.atlasMultiple + "的倍数");
+  }
+
+  return {
+    hasIssue: messages.length > 0,
+    label,
+    messages,
   };
 }
 
@@ -1150,6 +1314,53 @@ function renderAssetList() {
     editor.append(nameRow, recommendationWrap);
     row.append(checkbox, img, text, editor);
     els.assetList.appendChild(row);
+  });
+}
+
+function renderDetectionList() {
+  const issueCount = detectionAssets.filter((asset) => asset.hasIssue).length;
+  els.detectionCount.textContent = detectionAssets.length + " 张" + (issueCount ? " / " + issueCount + " 张问题" : "");
+  els.detectionProblemFilter.textContent = showDetectionProblemOnly ? "显示全部图片" : "只看问题图片";
+  els.detectionProblemFilter.setAttribute("aria-pressed", String(showDetectionProblemOnly));
+
+  if (!detectionAssets.length) {
+    els.detectionList.className = "asset-list-body empty-state";
+    els.detectionList.textContent = "请先上传需要检测的切图文件夹";
+    return;
+  }
+
+  const visibleAssets = showDetectionProblemOnly ? detectionAssets.filter((asset) => asset.hasIssue) : detectionAssets;
+  if (!visibleAssets.length) {
+    els.detectionList.className = "asset-list-body empty-state";
+    els.detectionList.textContent = "当前没有问题图片";
+    return;
+  }
+
+  els.detectionList.className = "asset-list-body detection-list";
+  els.detectionList.innerHTML = "";
+  visibleAssets.forEach((asset) => {
+    const row = document.createElement("div");
+    row.className = "asset-item detection-item" + (asset.hasIssue ? " has-issue" : " passed");
+
+    const img = document.createElement("img");
+    img.src = asset.url;
+    img.alt = asset.name;
+
+    const meta = document.createElement("div");
+    meta.className = "asset-meta";
+    const status = document.createElement("span");
+    status.className = "status-badge " + (asset.hasIssue ? "status-failed" : "status-done");
+    status.textContent = asset.hasIssue ? "有问题" : "通过";
+    meta.append(
+      createMetaLine("文件名称", asset.name),
+      createMetaLine("分辨率", formatResolution(asset.dimensions)),
+      createMetaLine("规格标注", asset.label),
+      createMetaLine("检测结果", asset.hasIssue ? asset.messages.join("；") : "通过"),
+      status
+    );
+
+    row.append(img, meta);
+    els.detectionList.appendChild(row);
   });
 }
 
@@ -1827,6 +2038,90 @@ function renderProjectSelect() {
   });
 }
 
+function renderDetectionProfileSelect() {
+  els.detectionProfileSelect.innerHTML = "";
+  detectionProfiles.forEach((profile) => {
+    const option = document.createElement("option");
+    option.value = profile.id;
+    option.textContent = profile.name;
+    option.selected = profile.id === activeDetectionProfileId;
+    els.detectionProfileSelect.appendChild(option);
+  });
+}
+
+function fillDetectionProfileForm() {
+  const profile = getActiveDetectionProfile();
+  els.detectionProfileName.value = profile.name;
+  els.detectionMaxSide.value = profile.maxSide;
+  els.detectionBgWidth.value = profile.backgroundWidth;
+  els.detectionBgHeight.value = profile.backgroundHeight;
+  els.detectionLargeThreshold.value = profile.largeThreshold;
+  els.detectionLargeMultiple.value = profile.largeMultiple;
+  els.detectionAtlasMultiple.value = profile.atlasMultiple;
+}
+
+function collectDetectionProfileForm() {
+  const current = getActiveDetectionProfile();
+  return normalizeDetectionProfile({
+    ...current,
+    name: els.detectionProfileName.value,
+    maxSide: els.detectionMaxSide.value,
+    backgroundWidth: els.detectionBgWidth.value,
+    backgroundHeight: els.detectionBgHeight.value,
+    largeThreshold: els.detectionLargeThreshold.value,
+    largeMultiple: els.detectionLargeMultiple.value,
+    atlasMultiple: els.detectionAtlasMultiple.value,
+  });
+}
+
+function updateActiveDetectionProfile(nextProfile, shouldSave) {
+  const index = detectionProfiles.findIndex((profile) => profile.id === activeDetectionProfileId);
+  if (index >= 0) detectionProfiles[index] = normalizeDetectionProfile(nextProfile);
+  if (shouldSave) {
+    saveDetectionProfiles();
+    renderDetectionProfileSelect();
+  }
+}
+
+function createDetectionProfile() {
+  const base = normalizeDetectionProfile(getActiveDetectionProfile());
+  const next = {
+    ...base,
+    id: "detect-" + Date.now(),
+    name: base.name + " 副本",
+  };
+  detectionProfiles.push(next);
+  activeDetectionProfileId = next.id;
+  saveDetectionProfiles();
+  renderDetectionProfileSelect();
+  fillDetectionProfileForm();
+  revalidateDetectionAssets();
+  showToast("已新增检测项目组");
+}
+
+function deleteDetectionProfile() {
+  if (detectionProfiles.length <= 1) {
+    showToast("至少保留一个检测项目组");
+    return;
+  }
+  detectionProfiles = detectionProfiles.filter((profile) => profile.id !== activeDetectionProfileId);
+  activeDetectionProfileId = detectionProfiles[0].id;
+  saveDetectionProfiles();
+  renderDetectionProfileSelect();
+  fillDetectionProfileForm();
+  revalidateDetectionAssets();
+  showToast("已删除检测项目组");
+}
+
+function revalidateDetectionAssets() {
+  const profile = getActiveDetectionProfile();
+  detectionAssets = detectionAssets.map((asset) => ({
+    ...asset,
+    ...validateDetectionDimensions(asset.dimensions, profile, asset.name),
+  }));
+  renderDetectionList();
+}
+
 function syncWorkProjectFields() {
   const project = getActiveProject();
   if (els.projectSelect.value !== activeProjectId) els.projectSelect.value = activeProjectId;
@@ -1952,6 +2247,75 @@ function loadProjects() {
     // Rebuild projects below.
   }
   return normalizeProjects(buildBuiltinProjects());
+}
+
+function getDefaultDetectionProfiles() {
+  return [
+    {
+      id: "ngr-detection",
+      name: "NGR切图检测规范",
+      maxSide: 1024,
+      backgroundWidth: 3440,
+      backgroundHeight: 1440,
+      largeThreshold: 512,
+      largeMultiple: 4,
+      atlasMultiple: 2,
+    },
+    {
+      id: "common-detection",
+      name: "通用切图检测规范",
+      maxSide: 1024,
+      backgroundWidth: 3440,
+      backgroundHeight: 1440,
+      largeThreshold: 512,
+      largeMultiple: 4,
+      atlasMultiple: 2,
+    },
+  ];
+}
+
+function loadDetectionProfiles() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(DETECTION_PROFILES_KEY));
+    if (Array.isArray(saved) && saved.length) return saved.map(normalizeDetectionProfile);
+  } catch {
+    // Rebuild below.
+  }
+  return getDefaultDetectionProfiles().map(normalizeDetectionProfile);
+}
+
+function loadActiveDetectionProfileId(nextProfiles) {
+  const saved = localStorage.getItem(ACTIVE_DETECTION_PROFILE_KEY);
+  if (saved && nextProfiles.some((profile) => profile.id === saved)) return saved;
+  return nextProfiles[0].id;
+}
+
+function normalizeDetectionProfile(profile = {}) {
+  const defaults = getDefaultDetectionProfiles()[0];
+  return {
+    id: profile.id || "detect-" + Date.now() + "-" + Math.random().toString(16).slice(2),
+    name: String(profile.name || defaults.name).trim() || defaults.name,
+    maxSide: toPositiveInt(profile.maxSide, defaults.maxSide),
+    backgroundWidth: toPositiveInt(profile.backgroundWidth, defaults.backgroundWidth),
+    backgroundHeight: toPositiveInt(profile.backgroundHeight, defaults.backgroundHeight),
+    largeThreshold: toPositiveInt(profile.largeThreshold, defaults.largeThreshold),
+    largeMultiple: toPositiveInt(profile.largeMultiple, defaults.largeMultiple),
+    atlasMultiple: toPositiveInt(profile.atlasMultiple, defaults.atlasMultiple),
+  };
+}
+
+function toPositiveInt(value, fallback) {
+  const number = Number.parseInt(value, 10);
+  return Number.isFinite(number) && number > 0 ? number : fallback;
+}
+
+function getActiveDetectionProfile() {
+  return detectionProfiles.find((profile) => profile.id === activeDetectionProfileId) || detectionProfiles[0];
+}
+
+function saveDetectionProfiles() {
+  localStorage.setItem(DETECTION_PROFILES_KEY, JSON.stringify(detectionProfiles));
+  localStorage.setItem(ACTIVE_DETECTION_PROFILE_KEY, activeDetectionProfileId);
 }
 
 function normalizeProjects(nextProjects) {

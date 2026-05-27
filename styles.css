@@ -135,7 +135,7 @@ main {
   min-height: calc(100vh - 140px);
   display: none;
   place-content: center;
-  grid-template-columns: minmax(280px, 420px);
+  grid-template-columns: repeat(2, minmax(280px, 420px));
   gap: 22px;
 }
 
@@ -1072,8 +1072,61 @@ button:disabled {
   border-radius: 8px;
 }
 
+.detection-config {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 10px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.detection-config label {
+  gap: 6px;
+}
+
+.detection-upload-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.detection-list-wrap {
+  min-height: 360px;
+}
+
+.detection-list {
+  max-height: none;
+}
+
+.detection-item {
+  grid-template-columns: 132px minmax(0, 1fr);
+  min-height: 150px;
+}
+
+.detection-item img {
+  width: 132px;
+  height: 132px;
+}
+
+.detection-item.has-issue {
+  border-color: #efb7ae;
+  background: #fff8f7;
+}
+
+.detection-item.passed {
+  border-color: #b9e2c7;
+  background: #f7fcf9;
+}
+
 @media (max-width: 860px) {
+  .home-view {
+    grid-template-columns: minmax(260px, 1fr);
+  }
+
   .job-config label,
+  .detection-config,
+  .detection-upload-grid,
   .asset-item,
   .inline-name-row,
   .inline-prefix,
