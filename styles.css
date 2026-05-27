@@ -1295,7 +1295,9 @@ button:disabled {
 .translator-panel {
   position: fixed;
   right: 18px;
-  bottom: 18px;
+  top: 50%;
+  bottom: auto;
+  transform: translateY(-50%);
   z-index: 30;
   width: min(360px, calc(100vw - 36px));
 }

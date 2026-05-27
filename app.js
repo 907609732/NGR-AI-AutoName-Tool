@@ -205,11 +205,47 @@ const builtinTranslations = {
   底图: "BG",
   背景图: "BG",
   底: "BG",
+  底板: "BG",
+  底纹: "Pattern",
   按钮: "Button",
   图标: "Icon",
   导航: "Nav",
   横幅: "Banner",
   模块: "Item",
+  页面: "Page",
+  页: "Page",
+  场景: "Scene",
+  商店: "Shop",
+  商城: "Shop",
+  森林: "Forest",
+  市场: "Market",
+  营业: "Business",
+  经营: "Business",
+  记录: "Record",
+  控件: "Control",
+  遮罩: "Mask",
+  覆盖层: "Overlay",
+  覆盖: "Overlay",
+  标题: "Title",
+  游历: "Travel",
+  外出游历: "Travel_Journal",
+  日志: "Journal",
+  手札: "Journal",
+  札记: "Note",
+  笔记: "Note",
+  冒险: "Adventure",
+  旅程: "Journey",
+  白菊: "White_Chrysanthemum",
+  菊花: "Chrysanthemum",
+  花: "Flower",
+  左上: "Top_Left",
+  右上: "Top_Right",
+  左下: "Bottom_Left",
+  右下: "Bottom_Right",
+  上: "Top",
+  下: "Bottom",
+  左: "Left",
+  右: "Right",
   奖励: "Rewards",
   常态: "Normal",
   默认: "Normal",
@@ -712,12 +748,16 @@ function bindTranslator() {
   });
   els.translatorToName.addEventListener("click", () => {
     const source = normalizeSourceName(els.translatorInput.value);
+    if (!source) {
+      els.translatorOutput.textContent = "请输入中文文件名、英文命名或单词";
+      return;
+    }
     const translated = cleanNamingName(translateFilename(source, parseKnowledge()));
-    els.translatorOutput.textContent = translated || "没有匹配到可用命名词";
+    els.translatorOutput.textContent = translated ? "命名词：" + translated + "\n中文含义：" + explainEnglishName(translated) : "没有匹配到可用命名词";
   });
   els.translatorExplain.addEventListener("click", () => {
     const source = cleanNamingName(els.translatorInput.value);
-    els.translatorOutput.textContent = explainEnglishName(source);
+    els.translatorOutput.textContent = source ? explainEnglishName(source) : "请输入需要解释的英文命名";
   });
 }
 
@@ -1840,15 +1880,17 @@ function inferMappedTerms(source, knowledge) {
 }
 
 function translateFilename(source, knowledge) {
+  const dictionaryName = cleanNamingName(translateTextByDictionary(source)
+    .replace(/([a-z])([A-Z])/g, "$1_$2")
+    .replace(/[^A-Za-z0-9_]+/g, "_"));
+  if (dictionaryName) return dictionaryName;
   const mappedValues = [];
   const lower = source.toLowerCase();
   knowledge.filenameRules.forEach((rule) => {
     if (keywordMatchesSource(rule.keyword, source, lower)) mappedValues.push(translateRuleValue(rule.value, knowledge));
   });
   if (mappedValues.length) return compactParts([...new Set(mappedValues)]);
-  return translateTextByDictionary(source)
-    .replace(/([a-z])([A-Z])/g, "$1_$2")
-    .replace(/[^A-Za-z0-9_]+/g, "_");
+  return "";
 }
 
 function translateRuleValue(value) {
@@ -1907,9 +1949,14 @@ function buildChinesePhraseDictionary() {
     home_forest_bg: "主页森林底图",
     home_market_bg: "主页市场底图",
     business_record_page_mask: "营业记录页遮罩",
+    business_record_page_top_left_control_mask_bg: "营业记录页左上控件遮罩底图",
     business_record_page: "营业记录页",
     record_page_mask: "记录页遮罩",
     page_mask_bottom: "页面底部遮罩",
+    top_left: "左上",
+    top_right: "右上",
+    bottom_left: "左下",
+    bottom_right: "右下",
     control_overlay: "控件覆盖层",
     overlay_mask: "覆盖层遮罩",
     travel_journal_title: "外出游历标题",
