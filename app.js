@@ -5,6 +5,7 @@ const ACTIVE_PROJECT_KEY = "ngr-ai-autoname-active-project";
 const AI_SETTINGS_KEY = "ngr-ai-autoname-ai-settings";
 const DETECTION_PROFILES_KEY = "ngr-ai-autoname-detection-profiles";
 const ACTIVE_DETECTION_PROFILE_KEY = "ngr-ai-autoname-active-detection-profile";
+const LIST_DISPLAY_MODE_KEY = "ngr-ai-autoname-list-display-mode";
 const IMAGE_TYPES = ["image/png", "image/jpeg", "image/webp", "image/gif", "image/svg+xml"];
 const NGR_TRAINING_VERSION = 6;
 const YYSLS_TRAINING_VERSION = 1;
@@ -235,6 +236,7 @@ let showProblemOnly = false;
 let showDetectionProblemOnly = false;
 let toastTimer = null;
 let activeLexiconCategory = "状态";
+let listDisplayMode = loadListDisplayMode();
 
 const els = {
   backButton: document.querySelector("#backButton"),
@@ -298,6 +300,7 @@ const els = {
   stopNaming: document.querySelector("#stopNaming"),
   exportFiles: document.querySelector("#exportFiles"),
   batchSuffix: document.querySelector("#batchSuffix"),
+  listDisplayMode: document.querySelector("#listDisplayMode"),
   applySuffix: document.querySelector("#applySuffix"),
   problemFilter: document.querySelector("#problemFilter"),
   removeSelected: document.querySelector("#removeSelected"),
@@ -342,6 +345,7 @@ function init() {
   bindDetection();
   bindTranslator();
   protectEditableShortcuts();
+  fillListDisplayMode();
   fillRulesForm();
   fillDetectionProfileForm();
   fillAiSettings();
@@ -765,6 +769,11 @@ function bindEditor() {
   els.problemFilter.addEventListener("click", toggleProblemFilter);
   els.removeSelected.addEventListener("click", removeSelectedAssets);
   els.exportFiles.addEventListener("click", exportRenamedFiles);
+  els.listDisplayMode.addEventListener("change", () => {
+    listDisplayMode = els.listDisplayMode.value === "compact" ? "compact" : "full";
+    localStorage.setItem(LIST_DISPLAY_MODE_KEY, listDisplayMode);
+    renderAssetList();
+  });
 }
 
 async function runNaming() {
@@ -1316,7 +1325,7 @@ function renderAssetList() {
     return;
   }
 
-  els.assetList.className = "asset-list-body";
+  els.assetList.className = "asset-list-body" + (listDisplayMode === "compact" ? " compact-list-mode" : "");
   els.assetList.innerHTML = "";
   visibleAssets.forEach((asset) => {
     const row = document.createElement("div");
@@ -1486,11 +1495,20 @@ function renderAssetList() {
     lexiconWrap.append(lexiconSummary, lexiconContent);
 
     nameRow.append(prefix, finalLabel);
-    editor.append(nameRow, recommendationWrap, lexiconWrap);
+    editor.append(nameRow);
+    if (listDisplayMode !== "compact") editor.append(recommendationWrap, lexiconWrap);
     row.append(checkbox, img, text, editor);
     els.assetList.appendChild(row);
   });
   protectEditableShortcuts(els.assetList);
+}
+
+function fillListDisplayMode() {
+  els.listDisplayMode.value = listDisplayMode;
+}
+
+function loadListDisplayMode() {
+  return localStorage.getItem(LIST_DISPLAY_MODE_KEY) === "compact" ? "compact" : "full";
 }
 
 function renderDetectionList() {

@@ -816,7 +816,7 @@ button:disabled {
 
 .batch-tools {
   display: grid;
-  grid-template-columns: minmax(0, 240px) minmax(0, 240px) auto auto auto;
+  grid-template-columns: minmax(0, 240px) minmax(0, 240px) minmax(0, 180px) auto auto auto;
   gap: 10px;
   align-items: end;
   padding-top: 18px;
@@ -1199,6 +1199,42 @@ button:disabled {
 .inline-final-name input {
   height: 30px;
   margin-top: 0;
+}
+
+.compact-list-mode .asset-item {
+  grid-template-columns: 22px 104px minmax(260px, 0.9fr) minmax(360px, 1.5fr);
+  min-height: 116px;
+}
+
+.compact-list-mode .asset-item input[type="checkbox"] {
+  margin-top: 43px;
+}
+
+.compact-list-mode .asset-item img {
+  width: 104px;
+  height: 104px;
+}
+
+.compact-list-mode .asset-meta {
+  row-gap: 3px;
+}
+
+.compact-list-mode .inline-editor {
+  align-self: start;
+  gap: 0;
+}
+
+.compact-list-mode .inline-name-row {
+  grid-template-columns: minmax(160px, 0.75fr) minmax(260px, 1.25fr);
+}
+
+.compact-list-mode .inline-prefix,
+.compact-list-mode .inline-final-name {
+  min-height: 56px;
+}
+
+.compact-list-mode .name-meaning {
+  display: none;
 }
 
 .list-batch-tools {
