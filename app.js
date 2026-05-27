@@ -873,17 +873,25 @@ async function addFiles(files) {
     return;
   }
 
-  const additions = await Promise.all(imageFiles.map(fileToAsset));
+  const results = await Promise.all(imageFiles.map(fileToAsset));
+  const additions = results.filter((asset) => !asset.rejected);
+  const rejected = results.filter((asset) => asset.rejected);
   const seen = new Set(assets.map((asset) => asset.key));
+  let loadedCount = 0;
   additions.forEach((asset) => {
     if (!seen.has(asset.key)) {
       assets.push(asset);
       seen.add(asset.key);
+      loadedCount += 1;
     }
   });
   if (!selectedId && assets.length) selectedId = assets[0].id;
   renderAssetList();
-  showToast("已载入 " + additions.length + " 张切图");
+  if (rejected.length) {
+    showToast(buildUploadRejectMessage(rejected, loadedCount));
+  } else {
+    showToast("已载入 " + loadedCount + " 张切图");
+  }
 }
 
 function isSupportedImage(file) {
@@ -893,6 +901,16 @@ function isSupportedImage(file) {
 async function fileToAsset(file) {
   const url = URL.createObjectURL(file);
   const dimensions = await readImageDimensions(url).catch(() => ({ width: 0, height: 0 }));
+  const validation = validateUploadDimensions(dimensions);
+  if (!validation.valid) {
+    URL.revokeObjectURL(url);
+    return {
+      rejected: true,
+      file,
+      dimensions,
+      reason: validation.reason,
+    };
+  }
   const originalBase = file.name.replace(/\.[^.]+$/, "");
   const extension = getExtension(file.name);
   const id = crypto.randomUUID ? crypto.randomUUID() : Date.now() + "-" + Math.random();
@@ -905,6 +923,8 @@ async function fileToAsset(file) {
     originalBase,
     extension,
     dimensions,
+    sizeCategory: validation.category,
+    sizeCategoryLabel: validation.label,
     checked: false,
     recommendations: [],
     finalBaseName: "",
@@ -912,6 +932,38 @@ async function fileToAsset(file) {
     namingStatus: "idle",
     statusMessage: "",
   };
+}
+
+function validateUploadDimensions(dimensions) {
+  const { width, height } = dimensions || {};
+  if (!isNgrProject(getActiveProject())) return { valid: true, category: "", label: "" };
+  if (!width || !height) return { valid: true, category: "unknown", label: "未知规格" };
+  const isBackgroundSize = width === 3440 && height === 1440;
+  const maxDimension = Math.max(width, height);
+  if (width % 2 !== 0 || height % 2 !== 0) {
+    return { valid: false, reason: "分辨率宽高不能是单数" };
+  }
+  if (maxDimension > 1024 && !isBackgroundSize) {
+    return { valid: false, reason: "除 3440x1440 背景图外，1024 以上分辨率不可上传" };
+  }
+  if (maxDimension >= 512) {
+    if (width % 4 !== 0 || height % 4 !== 0) {
+      return { valid: false, reason: "512 以上大图宽高必须是 4 的倍数" };
+    }
+    return { valid: true, category: "large", label: "大图" };
+  }
+  if (width % 2 !== 0 || height % 2 !== 0) {
+    return { valid: false, reason: "512 以下图集宽高必须是 2 的倍数" };
+  }
+  return { valid: true, category: "atlas", label: "图集" };
+}
+
+function buildUploadRejectMessage(rejected, loadedCount) {
+  const first = rejected[0];
+  const name = first.file?.name || "图片";
+  const size = first.dimensions?.width && first.dimensions?.height ? "（" + formatResolution(first.dimensions) + "）" : "";
+  const prefix = loadedCount ? "已载入 " + loadedCount + " 张，" : "";
+  return prefix + rejected.length + " 张不可上传：" + name + size + "，" + first.reason;
 }
 
 function readImageDimensions(url) {
@@ -959,12 +1011,13 @@ function renderAssetList() {
     const beforeName = createMetaLine("修改前名称", asset.originalBase + asset.extension);
     const afterName = createMetaLine("修改后名称", asset.finalBaseName ? buildExportName(asset) : "待命名");
     const resolution = createMetaLine("分辨率", formatResolution(asset.dimensions));
+    const sizeCategory = createMetaLine("规格", asset.sizeCategoryLabel || getSizeCategoryLabel(asset.dimensions));
     const status = document.createElement("span");
     status.className = "status-badge status-" + getAssetStatus(asset);
     status.textContent = getAssetStatusText(asset);
     const statusHint = document.createElement("em");
     statusHint.textContent = asset.statusMessage || "";
-    text.append(beforeName, afterName, resolution, status, statusHint);
+    text.append(beforeName, afterName, resolution, sizeCategory, status, statusHint);
 
     const editor = document.createElement("div");
     editor.className = "inline-editor";
@@ -1052,6 +1105,11 @@ function createMetaLine(label, value) {
 function formatResolution(dimensions) {
   if (!dimensions?.width || !dimensions?.height) return "无法读取";
   return dimensions.width + " x " + dimensions.height;
+}
+
+function getSizeCategoryLabel(dimensions) {
+  const validation = validateUploadDimensions(dimensions);
+  return validation.label || "通用";
 }
 
 function getAssetStatus(asset) {
