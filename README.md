@@ -8,5 +8,9 @@
 
 
 教程：  
-先在设置里面配置API，然后点测试API，成功后即可使用
+
+
+下载后解压打开index.html文件
+
+下载后第一次先在设置里面配置API，然后点测试API，成功后即可使用
 <img width="2430" height="870" alt="image" src="https://github.com/user-attachments/assets/d1788c1e-ab76-4120-9ee8-0f96dcb53864" />
