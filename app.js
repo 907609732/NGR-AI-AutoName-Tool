@@ -290,7 +290,7 @@ function bindNavigation() {
   els.rulesEntry.addEventListener("click", () => showView("rules"));
   els.workEntry.addEventListener("click", () => showView("work"));
   els.detectEntry.addEventListener("click", () => showView("detect"));
-  els.detectionSettingsEntry.addEventListener("click", () => showView("detectionSettings"));
+  els.detectionSettingsEntry?.addEventListener("click", () => showView("detectionSettings"));
   els.backToDetection.addEventListener("click", () => showView("detect"));
   els.backButton.addEventListener("click", () => showView("home"));
 }
@@ -1219,7 +1219,7 @@ function renderAssetList() {
   els.assetList.innerHTML = "";
   visibleAssets.forEach((asset) => {
     const row = document.createElement("div");
-    row.className = "asset-item" + (asset.id === selectedId ? " active" : "");
+    row.className = "asset-item" + (asset.dimensionIssue ? " has-issue" : "") + (asset.id === selectedId ? " active" : "");
     row.addEventListener("click", () => {
       selectedId = asset.id;
       renderAssetList();
@@ -1826,7 +1826,7 @@ function buildExcelTemplate(current) {
     {
       name: "使用说明",
       rows: [
-        ["AI辅助UI切图命名工具 - 方案模板"],
+        ["NGRAI辅助UI切图命名工具 - 方案模板"],
         ["请在各页签中修改“值”或词库内容，保存后回到网页导入。"],
         ["基础配置页：维护方案名称、固定前缀、工程名、分隔符、常用标签。"],
         ["页面词库/组件词库/状态词库：每行填写一个英文命名词。"],

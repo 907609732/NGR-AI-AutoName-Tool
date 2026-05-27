@@ -643,6 +643,17 @@ button:disabled {
   border-color: rgba(23, 126, 137, 0.28);
 }
 
+.asset-item.has-issue {
+  border-color: #efb7ae;
+  background: #fff8f7;
+}
+
+.asset-item.has-issue:hover,
+.asset-item.has-issue.active {
+  border-color: #e9958a;
+  background: #fff1ef;
+}
+
 .asset-item input {
   height: 18px;
 }
