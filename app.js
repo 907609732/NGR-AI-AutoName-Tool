@@ -4,7 +4,7 @@ const PROJECTS_KEY = "ngr-ai-autoname-projects";
 const ACTIVE_PROJECT_KEY = "ngr-ai-autoname-active-project";
 const AI_SETTINGS_KEY = "ngr-ai-autoname-ai-settings";
 const IMAGE_TYPES = ["image/png", "image/jpeg", "image/webp", "image/gif", "image/svg+xml"];
-const NGR_TRAINING_VERSION = 2;
+const NGR_TRAINING_VERSION = 3;
 
 const defaultRules = {
   schemeName: "默认方案",
@@ -22,7 +22,7 @@ const defaultRules = {
 const builtinSchemes = [
   {
     ...defaultRules,
-    schemeName: "NGR命名规范",
+    schemeName: "NGR图集命名规范",
     projectName: "NGR",
     contextDocs: "该项目由驼峰命名规则首字母大写。命名应优先使用英文 Pascal Case 词组，并用下划线连接，例如 Home_Button_Normal。",
   },
@@ -90,6 +90,47 @@ const ngrTrainingKnowledge = {
     "颜色/方向可作为末尾限定词保留：Red、Blue、Yellow、Black、White、Left、Right、Top、Bottom、Big、Small。"
   ].join("\n")
 };
+
+const ngrTemplateSchemeNames = ["NGR Icons命名规范", "NGR图集命名规范"];
+const ngrTemplateSchemes = [
+  normalizeLoadedRules({
+    ...defaultRules,
+    schemeName: "NGR Icons命名规范",
+    basePrefix: "T_UI_Icon",
+    projectName: "NGR",
+    separator: "_",
+    tags: "BG, Button, Hover, Normal, Icon, Module, Line, Bar, ProgressBar, Frame, Mask, Light, Pattern, Tab, Card, Selected, Forbidden, Lock, Unlock",
+    pageTerms: "Home\nLogin\nProfile\nSettings",
+    componentTerms: ngrTrainingKnowledge.componentTerms,
+    stateTerms: ngrTrainingKnowledge.stateTerms,
+    filenameRules: ngrTrainingKnowledge.filenameRules,
+    contextDocs: [
+      "该项目由驼峰命名规则首字母大写。该切图全部是 Icon，需要参考图片的中文进行英文翻译填写；如果英文翻译比较难，就使用拼音填写。",
+      "可以根据切图自带的中文命名进行英文翻译，使用简洁的英文填入。",
+      "命名结构固定为：T_UI_Icon_用户填写工程名_AI生成语义名。工程名只能来自当前界面工程名，不允许 AI 生成或使用 Modules 单词。",
+      ngrTrainingKnowledge.contextDocs
+    ].join("\n"),
+  }),
+  normalizeLoadedRules({
+    ...defaultRules,
+    schemeName: "NGR图集命名规范",
+    basePrefix: "T_UI",
+    projectName: "NGR",
+    separator: "_",
+    tags: "BG, Button, Hover, Normal, Icon, Line, Bar, ProgressBar, Frame, Mask, Light, Pattern, Tab, Card, Selected, Forbidden, Lock, Unlock",
+    pageTerms: "Home\nLogin\nProfile\nSettings",
+    componentTerms: ngrTrainingKnowledge.componentTerms,
+    stateTerms: ngrTrainingKnowledge.stateTerms,
+    filenameRules: ngrTrainingKnowledge.filenameRules,
+    contextDocs: [
+      "该项目由驼峰命名规则首字母大写。命名应优先使用英文 Pascal Case 词组，并用下划线连接，例如 Home_Button_Normal。",
+      "重点识别 Button、Normal、Hover、Active、Disabled 等按钮状态。",
+      "可以根据切图自带的中文命名进行英文翻译，使用简洁的英文填入。",
+      "命名结构固定为：T_UI_用户填写工程名_AI生成语义名。工程名只能来自当前界面工程名，不允许 AI 生成或使用 Modules 单词。",
+      ngrTrainingKnowledge.contextDocs
+    ].join("\n"),
+  }),
+];
 
 const builtinTranslations = {
   首页: "Home",
@@ -1918,16 +1959,28 @@ function normalizeProjects(nextProjects) {
 }
 
 function enrichProjectWithTraining(project) {
-  if (!isNgrProject(project) || project.trainingVersion >= NGR_TRAINING_VERSION) return project;
+  if (!isNgrProject(project)) return project;
+  if (project.trainingVersion >= NGR_TRAINING_VERSION && isExactNgrTemplateProject(project)) return project;
+  const activeSchemeName = ngrTemplateSchemeNames.includes(project.activeSchemeName) ? project.activeSchemeName : "NGR图集命名规范";
   return {
     ...project,
+    activeSchemeName,
     trainingVersion: NGR_TRAINING_VERSION,
-    schemes: project.schemes.map(enrichSchemeWithNgrTraining),
+    schemes: getNgrTemplateSchemes(),
   };
 }
 
 function isNgrProject(project) {
   return project.id === "ngr" || /NGR/i.test(project.name || "");
+}
+
+function isExactNgrTemplateProject(project) {
+  const schemeNames = (project.schemes || []).map((scheme) => scheme.schemeName);
+  return schemeNames.length === ngrTemplateSchemeNames.length && ngrTemplateSchemeNames.every((name) => schemeNames.includes(name));
+}
+
+function getNgrTemplateSchemes() {
+  return ngrTemplateSchemes.map((scheme) => normalizeLoadedRules({ ...scheme }));
 }
 
 function enrichSchemeWithNgrTraining(scheme) {
@@ -2026,12 +2079,9 @@ function buildBuiltinProjects() {
       id: "ngr",
       name: "NGR",
       description: "NGR 项目",
-      activeSchemeName: "NGR命名规范",
-      schemes: [
-        builtinSchemes[0],
-        { ...builtinSchemes[0], schemeName: "NGR按钮状态规范", contextDocs: builtinSchemes[0].contextDocs + "\n重点识别 Button、Normal、Hover、Active、Disabled 等按钮状态。" },
-        { ...builtinSchemes[0], schemeName: "NGR页面模块规范", contextDocs: builtinSchemes[0].contextDocs + "\n重点识别页面模块、背景图和 Banner，保持首字母大写驼峰词。" },
-      ],
+      activeSchemeName: "NGR图集命名规范",
+      trainingVersion: NGR_TRAINING_VERSION,
+      schemes: getNgrTemplateSchemes(),
     },
     {
       id: "yysls",
