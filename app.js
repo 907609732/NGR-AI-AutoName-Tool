@@ -4,7 +4,7 @@ const PROJECTS_KEY = "ngr-ai-autoname-projects";
 const ACTIVE_PROJECT_KEY = "ngr-ai-autoname-active-project";
 const AI_SETTINGS_KEY = "ngr-ai-autoname-ai-settings";
 const IMAGE_TYPES = ["image/png", "image/jpeg", "image/webp", "image/gif", "image/svg+xml"];
-const NGR_TRAINING_VERSION = 1;
+const NGR_TRAINING_VERSION = 2;
 
 const defaultRules = {
   schemeName: "默认方案",
@@ -43,8 +43,8 @@ const builtinSchemes = [
 ];
 
 const ngrTrainingKnowledge = {
-  pageTerms: [
-    "SkillPanel", "Mall", "RPVPArena", "Keyboard", "Reward", "Toast", "PVPBRMap", "MainHUD", "ActivityChessMiniGame", "Homestead",
+  projectTerms: [
+    "Modules", "SkillPanel", "Mall", "RPVPArena", "Keyboard", "Reward", "Toast", "PVPBRMap", "MainHUD", "ActivityChessMiniGame", "Homestead",
     "Plateau", "NewBattle", "Lottery", "MainHUDStatic", "PVPTeam", "Setting", "MallS1", "Team", "MissionHandbook", "Intimacy",
     "PVPMidBattle", "SocialChat", "ActivityVegetableXiaoXiaoLe", "PVPBattleCommon", "QuestGuide", "SceneryRecord", "BattlePass", "PVPBR",
     "FengyunFestival", "CreationBox", "ActivitySanrio", "GuanDan", "S1SeasonInterface", "ActivityHonorOfKingsLinkage", "RPVPTourArena",
@@ -55,7 +55,7 @@ const ngrTrainingKnowledge = {
     "Credit", "AchievementCenter", "RPVPWristSeal", "SocialBadge", "BackFlow", "Decompose", "SailNote", "ActivityTips", "DailyCheckIn",
     "ClimbingFestival", "Illustration", "RPVPArenaPrep", "BlindBox", "WristSealSkills", "PVPBRSkillPanel", "MainHUDMenu", "Achievement",
     "PVPBRTopLog", "EquipmentMake", "ActivityCharacterChallenge", "ItemNotice"
-  ].join("\n"),
+  ],
   componentTerms: [
     "BG", "Bg", "Button", "Btn", "Icon", "Banner", "Nav", "Module", "Line", "Bar", "ProgressBar", "Frame", "Mask", "Light",
     "Pattern", "Tab", "Card", "Item", "Panel", "Container", "Arrow", "Sprite", "Title", "Text", "Txt", "Number", "Num", "Point",
@@ -78,15 +78,13 @@ const ngrTrainingKnowledge = {
     "Sel=Selected", "Select=Selected", "Selected=Selected", "UnSel=Unselected", "Nml=Normal", "Normal=Normal", "Hover=Hover",
     "Active=Active", "Disabled=Disabled", "Forbidden=Forbidden", "PressedDwon=PressedDown", "PressedDown=PressedDown", "Check=Check",
     "Pick=Pick", "Ban=Ban", "Lock=Lock", "Unlock=Unlock", "Popup=Popup", "Toast=Toast", "Broadcast=Broadcast", "Recommend=Recommend",
-    "Reward=Reward", "GuideKey=GuideKey", "TitleBg=Title_BG", "MainBg=Main_BG", "IconBg=Icon_BG", "Mall=Mall", "BattlePass=BattlePass",
-    "Bp=BattlePass", "AMatch=ArenaMatch", "RPVPPick=RPVPPick", "RPVPArena=RPVPArena", "PVPBR=PVPBR", "MainHUD=MainHUD",
-    "Homestead=Homestead", "MissionHandbook=MissionHandbook", "SceneryRecord=SceneryRecord", "HeroicChronicles=HeroicChronicles",
-    "ActivityHOKCollab=ActivityHonorOfKingsLinkage", "VX=VFX"
+    "Reward=Reward", "GuideKey=GuideKey", "TitleBg=Title_BG", "MainBg=Main_BG", "IconBg=Icon_BG", "Bp=BattlePass", "AMatch=ArenaMatch",
+    "VX=VFX"
   ].join("\n"),
   contextDocs: [
-    "NGR 历史切图训练数据：来自 /Users/chenyuecai/Downloads/Modules，共分析 11727 张历史切图文件。",
-    "常见命名结构：T_UI_Img_模块_语义_状态、T_UI_Icon_模块_动作、T_UI_Bg_模块_用途。保留 T_UI 作为固定前缀，Img/Icon/Bg/Btn/Line/Mask/Frame/Light/Tab 等词可直接作为组件语义。",
-    "高频模块词：Mall、SkillPanel、RPVPArena、Keyboard、Reward、Toast、PVPBRMap、MainHUD、Homestead、BattlePass、MissionHandbook、SocialChat、SceneryRecord、RPVPPick。",
+    "NGR 历史切图训练数据：来自 /Users/chenyuecai/Downloads/Modules，共分析 11727 张历史切图文件。Modules 文件夹和各模块目录只代表工程名来源，不参与 AI 生成语义名。",
+    "命名结构固定为：T_UI_用户填写工程名_AI生成语义名。工程名只能来自用户填写的当前界面工程名，不能由 AI 从历史模块名自动生成。",
+    "历史命名常见结构：T_UI_Img_工程名_语义_状态、T_UI_Icon_工程名_动作、T_UI_Bg_工程名_用途。Img/Icon/Bg/Btn/Line/Mask/Frame/Light/Tab 等词可作为内容语义参考。",
     "图片尺寸规律：64x64、128x128、256x256、512x512 多为 Icon/Badge；宽高比大于 3 且高度较小多为 Line/Bar/Progress；3440x1440、2048x1024、1024x512 等大图优先视为 BG/MainBg/PanelBg；方形大图常见 Mask、Frame、Badge、AvatarMask。",
     "状态词习惯：Normal/Nml 表示常态，Sel/Select/Selected 表示选中，UnSel 表示未选，Disabled/Forbidden 表示禁用，Check/Pick/Ban/Lock/Unlock 可作为状态或行为后缀。",
     "颜色/方向可作为末尾限定词保留：Red、Blue、Yellow、Black、White、Left、Right、Top、Bottom、Big、Small。"
@@ -127,6 +125,7 @@ let selectedId = null;
 let referenceFile = null;
 let namingController = null;
 let stopRequested = false;
+let showProblemOnly = false;
 let toastTimer = null;
 
 const els = {
@@ -188,6 +187,7 @@ const els = {
   exportFiles: document.querySelector("#exportFiles"),
   batchSuffix: document.querySelector("#batchSuffix"),
   applySuffix: document.querySelector("#applySuffix"),
+  problemFilter: document.querySelector("#problemFilter"),
   removeSelected: document.querySelector("#removeSelected"),
   toast: document.querySelector("#toast"),
 };
@@ -525,6 +525,7 @@ function bindEditor() {
   els.runNaming.addEventListener("click", runNaming);
   els.stopNaming.addEventListener("click", stopNaming);
   els.applySuffix.addEventListener("click", applyBatchSuffix);
+  els.problemFilter.addEventListener("click", toggleProblemFilter);
   els.removeSelected.addEventListener("click", removeSelectedAssets);
   els.exportFiles.addEventListener("click", exportRenamedFiles);
 }
@@ -866,6 +867,13 @@ function removeSelectedAssets() {
   showToast("已删除选中的图片");
 }
 
+function toggleProblemFilter() {
+  showProblemOnly = !showProblemOnly;
+  els.problemFilter.textContent = showProblemOnly ? "显示全部图片" : "只看问题图片";
+  els.problemFilter.setAttribute("aria-pressed", String(showProblemOnly));
+  renderAssetList();
+}
+
 async function addFiles(files) {
   const imageFiles = files.filter(isSupportedImage);
   if (!imageFiles.length) {
@@ -873,22 +881,22 @@ async function addFiles(files) {
     return;
   }
 
-  const results = await Promise.all(imageFiles.map(fileToAsset));
-  const additions = results.filter((asset) => !asset.rejected);
-  const rejected = results.filter((asset) => asset.rejected);
+  const additions = await Promise.all(imageFiles.map(fileToAsset));
   const seen = new Set(assets.map((asset) => asset.key));
   let loadedCount = 0;
+  let loadedIssueCount = 0;
   additions.forEach((asset) => {
     if (!seen.has(asset.key)) {
       assets.push(asset);
       seen.add(asset.key);
       loadedCount += 1;
+      if (asset.dimensionIssue) loadedIssueCount += 1;
     }
   });
   if (!selectedId && assets.length) selectedId = assets[0].id;
   renderAssetList();
-  if (rejected.length) {
-    showToast(buildUploadRejectMessage(rejected, loadedCount));
+  if (loadedIssueCount) {
+    showToast("已载入 " + loadedCount + " 张，其中 " + loadedIssueCount + " 张分辨率有问题");
   } else {
     showToast("已载入 " + loadedCount + " 张切图");
   }
@@ -902,15 +910,6 @@ async function fileToAsset(file) {
   const url = URL.createObjectURL(file);
   const dimensions = await readImageDimensions(url).catch(() => ({ width: 0, height: 0 }));
   const validation = validateUploadDimensions(dimensions);
-  if (!validation.valid) {
-    URL.revokeObjectURL(url);
-    return {
-      rejected: true,
-      file,
-      dimensions,
-      reason: validation.reason,
-    };
-  }
   const originalBase = file.name.replace(/\.[^.]+$/, "");
   const extension = getExtension(file.name);
   const id = crypto.randomUUID ? crypto.randomUUID() : Date.now() + "-" + Math.random();
@@ -925,6 +924,8 @@ async function fileToAsset(file) {
     dimensions,
     sizeCategory: validation.category,
     sizeCategoryLabel: validation.label,
+    dimensionIssue: Boolean(validation.problem),
+    dimensionIssueMessage: validation.reason || "",
     checked: false,
     recommendations: [],
     finalBaseName: "",
@@ -941,29 +942,21 @@ function validateUploadDimensions(dimensions) {
   const isBackgroundSize = width === 3440 && height === 1440;
   const maxDimension = Math.max(width, height);
   if (width % 2 !== 0 || height % 2 !== 0) {
-    return { valid: false, reason: "分辨率宽高不能是单数" };
+    return { valid: true, problem: true, category: "invalid", label: "问题图片", reason: "分辨率宽高不能是单数" };
   }
   if (maxDimension > 1024 && !isBackgroundSize) {
-    return { valid: false, reason: "除 3440x1440 背景图外，1024 以上分辨率不可上传" };
+    return { valid: true, problem: true, category: "invalid", label: "问题图片", reason: "除 3440x1440 背景图外，1024 以上分辨率有问题" };
   }
   if (maxDimension >= 512) {
     if (width % 4 !== 0 || height % 4 !== 0) {
-      return { valid: false, reason: "512 以上大图宽高必须是 4 的倍数" };
+      return { valid: true, problem: true, category: "invalid", label: "问题图片", reason: "512 以上大图宽高必须是 4 的倍数" };
     }
     return { valid: true, category: "large", label: "大图" };
   }
   if (width % 2 !== 0 || height % 2 !== 0) {
-    return { valid: false, reason: "512 以下图集宽高必须是 2 的倍数" };
+    return { valid: true, problem: true, category: "invalid", label: "问题图片", reason: "512 以下图集宽高必须是 2 的倍数" };
   }
   return { valid: true, category: "atlas", label: "图集" };
-}
-
-function buildUploadRejectMessage(rejected, loadedCount) {
-  const first = rejected[0];
-  const name = first.file?.name || "图片";
-  const size = first.dimensions?.width && first.dimensions?.height ? "（" + formatResolution(first.dimensions) + "）" : "";
-  const prefix = loadedCount ? "已载入 " + loadedCount + " 张，" : "";
-  return prefix + rejected.length + " 张不可上传：" + name + size + "，" + first.reason;
 }
 
 function readImageDimensions(url) {
@@ -976,16 +969,23 @@ function readImageDimensions(url) {
 }
 
 function renderAssetList() {
-  els.fileCount.textContent = assets.length + " 张";
+  const problemCount = assets.filter((asset) => asset.dimensionIssue).length;
+  els.fileCount.textContent = assets.length + " 张" + (problemCount ? " / " + problemCount + " 张问题" : "");
   if (!assets.length) {
     els.assetList.className = "asset-list-body empty-state";
     els.assetList.textContent = "请先上传切图文件夹";
     return;
   }
+  const visibleAssets = showProblemOnly ? assets.filter((asset) => asset.dimensionIssue) : assets;
+  if (!visibleAssets.length) {
+    els.assetList.className = "asset-list-body empty-state";
+    els.assetList.textContent = "当前没有分辨率问题图片";
+    return;
+  }
 
   els.assetList.className = "asset-list-body";
   els.assetList.innerHTML = "";
-  assets.forEach((asset) => {
+  visibleAssets.forEach((asset) => {
     const row = document.createElement("div");
     row.className = "asset-item" + (asset.id === selectedId ? " active" : "");
     row.addEventListener("click", () => {
@@ -1012,12 +1012,13 @@ function renderAssetList() {
     const afterName = createMetaLine("修改后名称", asset.finalBaseName ? buildExportName(asset) : "待命名");
     const resolution = createMetaLine("分辨率", formatResolution(asset.dimensions));
     const sizeCategory = createMetaLine("规格", asset.sizeCategoryLabel || getSizeCategoryLabel(asset.dimensions));
+    const dimensionCheck = createMetaLine("分辨率检查", asset.dimensionIssue ? asset.dimensionIssueMessage : "通过");
     const status = document.createElement("span");
     status.className = "status-badge status-" + getAssetStatus(asset);
     status.textContent = getAssetStatusText(asset);
     const statusHint = document.createElement("em");
     statusHint.textContent = asset.statusMessage || "";
-    text.append(beforeName, afterName, resolution, sizeCategory, status, statusHint);
+    text.append(beforeName, afterName, resolution, sizeCategory, dimensionCheck, status, statusHint);
 
     const editor = document.createElement("div");
     editor.className = "inline-editor";
@@ -1135,17 +1136,14 @@ function makeRecommendations(asset) {
   const tags = parseTags(rules.tags);
   const translatedSource = translateFilename(source, knowledge);
   const kind = mapped.component || inferKind(asset, source, tags, knowledge.componentTerms);
-  const page = mapped.page || inferPage(source, knowledge.pageTerms);
   const state = mapped.state || inferState(source, knowledge.stateTerms);
   const candidates = [
-    compactParts([page, kind, state]),
     compactParts([kind, state]),
     compactParts([translatedSource || kind]),
-    compactParts([page, pickTerm(knowledge.componentTerms, "Module", tags.includes("Module") ? "Module" : "模块")]),
     compactParts([kind, pickTerm(knowledge.stateTerms, "Normal", tags.includes("Normal") ? "Normal" : "常态")]),
     ...mapped.direct,
   ];
-  return [...new Set(candidates.map(sanitizeName).filter(Boolean))].slice(0, 5);
+  return [...new Set(candidates.map(removeProjectTermsFromName).map(sanitizeName).filter(Boolean))].slice(0, 5);
 }
 
 function inferKind(asset, source, tags, componentTerms = []) {
@@ -1323,13 +1321,53 @@ function sameTerm(a, b) {
 }
 
 function normalizeSourceName(name) {
-  return name
+  return stripProjectTermsFromSource(name
     .replace(/^T_UI_(Img|Icon|Bg|Btn)?_?/i, "")
     .replace(/^T_(Img|Icon|Bg|Btn)_?/i, "")
     .replace(/^(@\d+x|icon-|img-|image-|切图_|切图-)/i, "")
     .replace(/[\s-]+/g, "_")
     .replace(/_{2,}/g, "_")
-    .replace(/^_+|_+$/g, "");
+    .replace(/^_+|_+$/g, ""));
+}
+
+function stripProjectTermsFromSource(source) {
+  let result = sanitizeName(source);
+  const projectTerms = getProjectTerms();
+  let changed = true;
+  while (changed) {
+    changed = false;
+    projectTerms.forEach((term) => {
+      const cleanTerm = sanitizeName(term);
+      if (!cleanTerm) return;
+      const pattern = new RegExp("^" + escapeRegExp(cleanTerm) + "(_|$)", "i");
+      if (pattern.test(result)) {
+        result = result.replace(pattern, "").replace(/^_+/, "");
+        changed = true;
+      }
+    });
+  }
+  return result;
+}
+
+function removeProjectTermsFromName(name) {
+  const projectTerms = new Set(getProjectTerms().map((term) => sanitizeName(term).toLowerCase()).filter(Boolean));
+  return sanitizeName(name)
+    .split(/_+/)
+    .filter((part) => !projectTerms.has(part.toLowerCase()))
+    .join("_");
+}
+
+function getProjectTerms() {
+  return [
+    "Modules",
+    rules.projectName,
+    getActiveProject()?.name,
+    ...(ngrTrainingKnowledge.projectTerms || []),
+  ].filter(Boolean);
+}
+
+function escapeRegExp(value) {
+  return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 function compactParts(parts) {
@@ -1881,10 +1919,10 @@ function enrichSchemeWithNgrTraining(scheme) {
   return normalizeLoadedRules({
     ...scheme,
     tags: mergeListText(scheme.tags, "Line, Bar, ProgressBar, Frame, Mask, Light, Pattern, Tab, Card, Selected, Forbidden, Lock, Unlock"),
-    pageTerms: mergeLineText(scheme.pageTerms, ngrTrainingKnowledge.pageTerms),
+    pageTerms: removeLineText(scheme.pageTerms, ngrTrainingKnowledge.projectTerms.join("\n")),
     componentTerms: mergeLineText(scheme.componentTerms, ngrTrainingKnowledge.componentTerms),
     stateTerms: mergeLineText(scheme.stateTerms, ngrTrainingKnowledge.stateTerms),
-    filenameRules: mergeRuleText(scheme.filenameRules, ngrTrainingKnowledge.filenameRules),
+    filenameRules: removeRuleText(mergeRuleText(scheme.filenameRules, ngrTrainingKnowledge.filenameRules), ngrTrainingKnowledge.projectTerms.join("\n")),
     contextDocs: mergeContextText(scheme.contextDocs, ngrTrainingKnowledge.contextDocs),
   });
 }
@@ -1921,6 +1959,26 @@ function mergeListText(currentText, incomingText) {
       items.push(item);
     });
   return items.join(", ");
+}
+
+function removeLineText(currentText, removeText) {
+  const blocked = new Set(String(removeText || "").split(/\n/).map((line) => line.trim().toLowerCase()).filter(Boolean));
+  return String(currentText || "")
+    .split(/\n/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .filter((line) => !blocked.has(line.toLowerCase()))
+    .join("\n");
+}
+
+function removeRuleText(currentText, removeText) {
+  const blocked = new Set(String(removeText || "").split(/\n/).map((line) => line.trim().toLowerCase()).filter(Boolean));
+  return String(currentText || "")
+    .split(/\n/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .filter((line) => !blocked.has(line.split("=")[0].trim().toLowerCase()))
+    .join("\n");
 }
 
 function mergeContextText(currentText, incomingText) {
