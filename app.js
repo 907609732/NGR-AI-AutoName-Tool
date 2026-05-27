@@ -1118,7 +1118,7 @@ async function fileToAsset(file) {
 async function fileToDetectionAsset(file) {
   const url = URL.createObjectURL(file);
   const dimensions = await readImageDimensions(url).catch(() => ({ width: 0, height: 0 }));
-  const result = validateDetectionDimensions(dimensions, getActiveDetectionProfile(), file.webkitRelativePath || file.name);
+  const result = validateDetectionDimensions(dimensions, getActiveDetectionProfile());
   const id = crypto.randomUUID ? crypto.randomUUID() : Date.now() + "-" + Math.random();
   const key = (file.webkitRelativePath || file.name) + "-" + file.size + "-" + file.lastModified;
   return {
@@ -1132,7 +1132,7 @@ async function fileToDetectionAsset(file) {
   };
 }
 
-function validateDetectionDimensions(dimensions, profile, fileName = "") {
+function validateDetectionDimensions(dimensions, profile) {
   const { width, height } = dimensions || {};
   if (!width || !height) {
     return { hasIssue: true, label: "无法读取", messages: ["无法读取图片分辨率"] };
@@ -1141,7 +1141,6 @@ function validateDetectionDimensions(dimensions, profile, fileName = "") {
   const maxSide = Math.max(width, height);
   const messages = [];
   const isBackground = width === config.backgroundWidth && height === config.backgroundHeight;
-  const isBackgroundName = /(^|[_\-\s])(bg|background)([_\-\s]|$)|背景|底图/i.test(fileName);
   let label = isBackground ? "背景图" : maxSide > config.largeThreshold ? "大图" : "图集";
 
   if (width % 2 !== 0 || height % 2 !== 0) {
@@ -1149,9 +1148,6 @@ function validateDetectionDimensions(dimensions, profile, fileName = "") {
   }
   if (maxSide > config.maxSide && !isBackground) {
     messages.push("分辨率单边不能超过" + config.maxSide);
-  }
-  if (isBackgroundName && !isBackground) {
-    messages.push("背景图规范分辨率是" + config.backgroundWidth + "x" + config.backgroundHeight);
   }
   if (isBackground) {
     label = "背景图";
@@ -2140,7 +2136,7 @@ function revalidateDetectionAssets() {
   const profile = getActiveDetectionProfile();
   detectionAssets = detectionAssets.map((asset) => ({
     ...asset,
-    ...validateDetectionDimensions(asset.dimensions, profile, asset.name),
+    ...validateDetectionDimensions(asset.dimensions, profile),
   }));
   renderDetectionList();
 }
