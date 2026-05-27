@@ -120,9 +120,9 @@ button {
 }
 
 main {
-  width: min(1180px, calc(100vw - 40px));
+  width: min(1780px, calc(100vw - 20px));
   margin: 0 auto;
-  padding: 18px 0 36px;
+  padding: 12px 0 28px;
 }
 
 .view {
@@ -907,11 +907,11 @@ button:disabled {
 }
 
 .asset-item {
-  grid-template-columns: 24px 150px minmax(260px, 1fr) minmax(400px, 1.45fr);
+  grid-template-columns: 22px 128px minmax(240px, 0.9fr) minmax(360px, 1.8fr);
   align-items: start;
-  gap: 16px;
-  min-height: 212px;
-  padding: 14px;
+  gap: 12px;
+  min-height: 144px;
+  padding: 8px;
   cursor: default;
 }
 
@@ -957,32 +957,36 @@ button:disabled {
 }
 
 .work-view .asset-item {
-  gap: 10px;
-  min-height: 184px;
-  padding: 8px;
+  gap: 8px;
+  min-height: 140px;
+  padding: 6px;
 }
 
 .asset-item input[type="checkbox"] {
   height: 18px;
-  margin-top: 66px;
+  margin-top: 55px;
 }
 
 .asset-item img {
-  width: 150px;
-  height: 150px;
+  width: 128px;
+  height: 128px;
 }
 
 .asset-meta {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: 10px;
+  row-gap: 4px;
   min-width: 0;
-  padding-top: 2px;
+  padding-top: 0;
 }
 
 .meta-line {
   display: grid;
-  grid-template-columns: 78px minmax(0, 1fr);
-  gap: 8px;
+  grid-template-columns: 66px minmax(0, 1fr);
+  gap: 6px;
   align-items: start;
-  margin-bottom: 8px;
+  margin-bottom: 0;
 }
 
 .meta-line span {
@@ -996,10 +1000,22 @@ button:disabled {
 .meta-line strong {
   min-width: 0;
   color: var(--text);
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 650;
-  line-height: 1.45;
+  line-height: 1.35;
   overflow-wrap: anywhere;
+}
+
+.work-view .status-badge {
+  min-height: 20px;
+  margin-top: 0 !important;
+  padding: 0 7px;
+}
+
+.work-view .asset-meta em {
+  min-height: 0;
+  margin-top: 0;
+  line-height: 1.35;
 }
 
 .meta-line.warning-line span,
@@ -1009,29 +1025,29 @@ button:disabled {
 
 .inline-editor {
   display: grid;
-  gap: 12px;
+  gap: 8px;
   min-width: 0;
 }
 
 .inline-name-row {
   display: grid;
   grid-template-columns: minmax(180px, 0.9fr) minmax(240px, 1.1fr);
-  gap: 12px;
+  gap: 8px;
   min-width: 0;
 }
 
 .inline-prefix {
   display: grid;
   grid-template-columns: 72px minmax(0, 1fr);
-  gap: 10px;
+  gap: 8px;
   align-items: center;
-  padding: 9px 10px;
+  padding: 7px 8px;
   border-radius: 8px;
   background: var(--surface-2);
 }
 
 .inline-prefix input {
-  height: 34px;
+  height: 30px;
   min-width: 0;
 }
 
@@ -1050,7 +1066,7 @@ button:disabled {
 
 .inline-recommendations {
   display: grid;
-  gap: 8px;
+  gap: 6px;
 }
 
 .inline-lexicon {
@@ -1061,7 +1077,7 @@ button:disabled {
 
 .inline-lexicon summary {
   cursor: pointer;
-  padding: 9px 10px;
+  padding: 7px 8px;
   color: var(--text);
   font-size: 13px;
   font-weight: 750;
@@ -1070,8 +1086,8 @@ button:disabled {
 
 .lexicon-content {
   display: grid;
-  gap: 10px;
-  padding: 0 10px 10px;
+  gap: 8px;
+  padding: 0 8px 8px;
 }
 
 .lexicon-tabs {
@@ -1130,13 +1146,13 @@ button:disabled {
 
 .recommendations.compact {
   margin-top: 0;
-  gap: 8px;
+  gap: 6px;
 }
 
 .recommendations.compact .recommendation {
-  min-height: 38px;
-  padding: 5px 10px;
-  font-size: 13px;
+  min-height: 34px;
+  padding: 4px 8px;
+  font-size: 12px;
   text-align: left;
 }
 
@@ -1149,19 +1165,19 @@ button:disabled {
 .recommendation-meaning,
 .name-meaning {
   display: block;
-  margin-top: 3px;
+  margin-top: 2px;
   color: var(--muted);
   font-size: 12px;
   font-weight: 600;
-  line-height: 1.35;
+  line-height: 1.25;
 }
 
 .inline-final-name {
   display: grid;
   grid-template-columns: 72px minmax(0, 1fr);
-  gap: 10px;
+  gap: 8px;
   align-items: center;
-  padding: 9px 10px;
+  padding: 7px 8px;
   border-radius: 8px;
   background: var(--surface-2);
 }
@@ -1172,7 +1188,7 @@ button:disabled {
 }
 
 .inline-final-name input {
-  height: 34px;
+  height: 30px;
   margin-top: 0;
 }
 
