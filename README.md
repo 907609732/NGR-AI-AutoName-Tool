@@ -7,7 +7,8 @@
 合作：907609732@qq.com  
 
 
-教程：  
+## **使用教程**
+### **配置说明**
 
 
 下载后解压打开index.html文件
@@ -16,6 +17,8 @@
 <img width="2882" height="838" alt="image" src="https://github.com/user-attachments/assets/66121a42-d832-4788-b374-2badfb26e4e1" />
 
 
+
+### **软件界面欣赏：**
 <img width="2940" height="1682" alt="image" src="https://github.com/user-attachments/assets/0887de3b-19a0-47d0-9082-43de143510ce" />
 
 <img width="2940" height="1682" alt="image" src="https://github.com/user-attachments/assets/9ef35199-3c9d-466f-92f2-77ef00d799a1" />
