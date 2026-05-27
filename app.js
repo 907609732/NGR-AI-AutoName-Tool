@@ -1210,6 +1210,7 @@ async function fileToAsset(file) {
     recommendations: [],
     finalBaseName: "",
     customPrefix: "",
+    lexiconOpen: false,
     namingStatus: "idle",
     statusMessage: "",
   };
@@ -1428,6 +1429,10 @@ function renderAssetList() {
 
     const lexiconWrap = document.createElement("details");
     lexiconWrap.className = "inline-lexicon";
+    lexiconWrap.open = Boolean(asset.lexiconOpen);
+    lexiconWrap.addEventListener("toggle", () => {
+      asset.lexiconOpen = lexiconWrap.open;
+    });
     const lexiconSummary = document.createElement("summary");
     lexiconSummary.textContent = "词库";
     const lexiconContent = document.createElement("div");
