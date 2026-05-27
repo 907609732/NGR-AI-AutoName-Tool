@@ -116,7 +116,7 @@ button {
 main {
   width: min(1180px, calc(100vw - 40px));
   margin: 0 auto;
-  padding: 24px 0 48px;
+  padding: 18px 0 36px;
 }
 
 .view {
@@ -807,7 +807,7 @@ button:disabled {
 @media (max-width: 860px) {
   main {
     width: min(100vw - 24px, 720px);
-    padding-top: 20px;
+    padding-top: 12px;
   }
 
   .topbar {
@@ -832,6 +832,10 @@ button:disabled {
   .toolbar-actions {
     justify-content: flex-start;
     margin-top: 14px;
+  }
+
+  .work-view .toolbar-actions {
+    margin-top: 8px;
   }
 }
 
@@ -877,6 +881,53 @@ button:disabled {
   min-height: 212px;
   padding: 14px;
   cursor: default;
+}
+
+.work-view .work-toolbar {
+  margin-bottom: 10px;
+}
+
+.work-view .toolbar-actions {
+  gap: 8px;
+}
+
+.work-view .job-config {
+  margin-bottom: 8px;
+  padding: 9px 10px;
+}
+
+.work-view .job-config label {
+  min-height: 34px;
+}
+
+.work-view .upload-grid {
+  gap: 8px;
+  margin-bottom: 8px;
+  padding: 4px;
+}
+
+.work-view .upload-panel {
+  min-height: 66px;
+  padding: 8px 10px;
+}
+
+.work-view .reference-preview {
+  margin-bottom: 10px;
+  padding: 8px 10px;
+}
+
+.work-view .list-head {
+  padding: 10px 12px;
+}
+
+.work-view .asset-list-body {
+  padding: 6px;
+}
+
+.work-view .asset-item {
+  gap: 10px;
+  min-height: 184px;
+  padding: 8px;
 }
 
 .asset-item input[type="checkbox"] {
