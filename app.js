@@ -4,18 +4,19 @@ const PROJECTS_KEY = "ngr-ai-autoname-projects";
 const ACTIVE_PROJECT_KEY = "ngr-ai-autoname-active-project";
 const AI_SETTINGS_KEY = "ngr-ai-autoname-ai-settings";
 const IMAGE_TYPES = ["image/png", "image/jpeg", "image/webp", "image/gif", "image/svg+xml"];
-const NGR_TRAINING_VERSION = 3;
+const NGR_TRAINING_VERSION = 4;
+const FORBIDDEN_NAMING_TERMS = ["module", "modules"];
 
 const defaultRules = {
   schemeName: "默认方案",
   basePrefix: "T_UI",
   projectName: "工程名",
   separator: "_",
-  tags: "BG, Button, Hover, Normal, Icon, Module",
+  tags: "BG, Button, Hover, Normal, Icon, Item",
   pageTerms: "Home\nLogin\nProfile\nSettings",
-  componentTerms: "BG\nButton\nIcon\nBanner\nNav\nModule",
+  componentTerms: "BG\nButton\nIcon\nBanner\nNav\nItem",
   stateTerms: "Normal\nHover\nActive\nDisabled",
-  filenameRules: "首页=Home\n主页=Home\n登录=Login\n登陆=Login\n个人中心=Profile\n我的=Profile\n设置=Settings\n背景=BG\n底图=BG\n按钮=Button\n图标=Icon\n导航=Nav\n横幅=Banner\n模块=Module\n常态=Normal\n默认=Normal\n悬浮=Hover\n选中=Active\n点击=Active\n禁用=Disabled\n不可用=Disabled\nbg=BG\nbackground=BG\nbtn=Button\nbutton=Button\nicon=Icon\nhover=Hover\nactive=Active\ndisabled=Disabled\nhome=Home\nlogin=Login\nuser=Profile",
+  filenameRules: "首页=Home\n主页=Home\n登录=Login\n登陆=Login\n个人中心=Profile\n我的=Profile\n设置=Settings\n背景=BG\n底图=BG\n按钮=Button\n图标=Icon\n导航=Nav\n横幅=Banner\n模块=Item\n常态=Normal\n默认=Normal\n悬浮=Hover\n选中=Active\n点击=Active\n禁用=Disabled\n不可用=Disabled\nbg=BG\nbackground=BG\nbtn=Button\nbutton=Button\nicon=Icon\nhover=Hover\nactive=Active\ndisabled=Disabled\nhome=Home\nlogin=Login\nuser=Profile",
   contextDocs: "",
 };
 
@@ -30,7 +31,7 @@ const builtinSchemes = [
     ...defaultRules,
     schemeName: "yysls命名规范",
     projectName: "yysls",
-    tags: "BG, Button, Hover, Normal, Icon, Module, Pinyin",
+    tags: "BG, Button, Hover, Normal, Icon, Item, Pinyin",
     filenameRules: defaultRules.filenameRules + "\n按钮=AnNiu\n背景=BeiJing\n图标=TuBiao\n首页=ShouYe\n登录=DengLu",
     contextDocs: "该项目命名规范带中英混合，有拼音命名。遇到团队特殊词可保留拼音或中英混合表达。",
   },
@@ -57,7 +58,7 @@ const ngrTrainingKnowledge = {
     "PVPBRTopLog", "EquipmentMake", "ActivityCharacterChallenge", "ItemNotice"
   ],
   componentTerms: [
-    "BG", "Bg", "Button", "Btn", "Icon", "Banner", "Nav", "Module", "Line", "Bar", "ProgressBar", "Frame", "Mask", "Light",
+    "BG", "Bg", "Button", "Btn", "Icon", "Banner", "Nav", "Item", "Line", "Bar", "ProgressBar", "Frame", "Mask", "Light",
     "Pattern", "Tab", "Card", "Item", "Panel", "Container", "Arrow", "Sprite", "Title", "Text", "Txt", "Number", "Num", "Point",
     "Circle", "Bubble", "Logo", "Tag", "Lock", "Unlock", "Popup", "Toast", "Broadcast", "Recommend", "Reward", "GloryReward", "Guide",
     "GuideKey", "Key", "Map", "Skill", "SkillBg", "HeadBg", "TitleBg", "MainBg", "IconBg", "AvatarMask", "Progress", "Quality",
@@ -98,7 +99,7 @@ const ngrTemplateSchemes = [
     basePrefix: "T_UI_Icon",
     projectName: "NGR",
     separator: "_",
-    tags: "BG, Button, Hover, Normal, Icon, Module, Line, Bar, ProgressBar, Frame, Mask, Light, Pattern, Tab, Card, Selected, Forbidden, Lock, Unlock",
+    tags: "BG, Button, Hover, Normal, Icon, Item, Line, Bar, ProgressBar, Frame, Mask, Light, Pattern, Tab, Card, Selected, Forbidden, Lock, Unlock",
     pageTerms: "Home\nLogin\nProfile\nSettings",
     componentTerms: ngrTrainingKnowledge.componentTerms,
     stateTerms: ngrTrainingKnowledge.stateTerms,
@@ -106,7 +107,7 @@ const ngrTemplateSchemes = [
     contextDocs: [
       "该项目由驼峰命名规则首字母大写。该切图全部是 Icon，需要参考图片的中文进行英文翻译填写；如果英文翻译比较难，就使用拼音填写。",
       "可以根据切图自带的中文命名进行英文翻译，使用简洁的英文填入。",
-      "命名结构固定为：T_UI_Icon_用户填写工程名_AI生成语义名。工程名只能来自当前界面工程名，不允许 AI 生成或使用 Modules 单词。",
+      "命名结构固定为：T_UI_Icon_用户填写工程名_AI生成语义名。工程名只能来自当前界面工程名，不允许 AI 使用工程目录名作为语义词。",
       ngrTrainingKnowledge.contextDocs
     ].join("\n"),
   }),
@@ -116,7 +117,7 @@ const ngrTemplateSchemes = [
     basePrefix: "T_UI",
     projectName: "NGR",
     separator: "_",
-    tags: "BG, Button, Hover, Normal, Icon, Line, Bar, ProgressBar, Frame, Mask, Light, Pattern, Tab, Card, Selected, Forbidden, Lock, Unlock",
+    tags: "BG, Button, Hover, Normal, Icon, Item, Line, Bar, ProgressBar, Frame, Mask, Light, Pattern, Tab, Card, Selected, Forbidden, Lock, Unlock",
     pageTerms: "Home\nLogin\nProfile\nSettings",
     componentTerms: ngrTrainingKnowledge.componentTerms,
     stateTerms: ngrTrainingKnowledge.stateTerms,
@@ -125,7 +126,7 @@ const ngrTemplateSchemes = [
       "该项目由驼峰命名规则首字母大写。命名应优先使用英文 Pascal Case 词组，并用下划线连接，例如 Home_Button_Normal。",
       "重点识别 Button、Normal、Hover、Active、Disabled 等按钮状态。",
       "可以根据切图自带的中文命名进行英文翻译，使用简洁的英文填入。",
-      "命名结构固定为：T_UI_用户填写工程名_AI生成语义名。工程名只能来自当前界面工程名，不允许 AI 生成或使用 Modules 单词。",
+      "命名结构固定为：T_UI_用户填写工程名_AI生成语义名。工程名只能来自当前界面工程名，不允许 AI 使用工程目录名作为语义词。",
       ngrTrainingKnowledge.contextDocs
     ].join("\n"),
   }),
@@ -145,7 +146,7 @@ const builtinTranslations = {
   图标: "Icon",
   导航: "Nav",
   横幅: "Banner",
-  模块: "Module",
+  模块: "Item",
   常态: "Normal",
   默认: "Normal",
   悬浮: "Hover",
@@ -819,6 +820,7 @@ function buildAiPrompt(asset, localRecommendations) {
     "你是 UI 切图命名助手。请根据切图图片、参考效果图、原始文件名和团队命名知识库，生成 2 到 5 个英文语义名称。",
     "只返回 JSON，格式为：{\"names\":[\"Login_Button_Hover\",\"Home_BG\"]}。",
     "不要包含固定前缀、工程名、文件扩展名。名称只允许英文字母、数字和下划线，使用 Pascal/Title 英文词组并以下划线连接。",
+    "命名单词禁止出现 Module 或 Modules；如果需要表达通用元素，请使用 Item、Panel、Card、Icon、BG 等更具体词。",
     "原始文件名：" + asset.originalBase + asset.extension,
     "当前前缀：" + buildAssetPrefix(asset),
     "本地候选：" + localRecommendations.join(", "),
@@ -857,7 +859,7 @@ function parseAiNames(text) {
 
 function normalizeAiNames(names, fallback) {
   const normalized = names
-    .map((name) => sanitizeName(name))
+    .map((name) => cleanNamingName(name))
     .filter(Boolean)
     .filter((name) => /^[A-Za-z0-9_]+$/.test(name));
   return [...new Set(normalized)].slice(0, 5).length ? [...new Set(normalized)].slice(0, 5) : fallback;
@@ -1079,6 +1081,9 @@ function renderAssetList() {
     editor.className = "inline-editor";
     editor.addEventListener("click", (event) => event.stopPropagation());
 
+    const nameRow = document.createElement("div");
+    nameRow.className = "inline-name-row";
+
     const prefix = document.createElement("label");
     prefix.className = "inline-prefix";
     const prefixLabel = document.createElement("span");
@@ -1134,14 +1139,15 @@ function renderAssetList() {
     finalMeaning.className = "name-meaning";
     finalMeaning.textContent = "中文含义：" + explainEnglishName(asset.finalBaseName);
     finalInput.addEventListener("input", () => {
-      asset.finalBaseName = sanitizeName(finalInput.value);
+      asset.finalBaseName = cleanNamingName(finalInput.value);
       afterName.querySelector("strong").textContent = asset.finalBaseName ? buildExportName(asset) : "待命名";
       finalMeaning.textContent = "中文含义：" + explainEnglishName(asset.finalBaseName);
     });
     finalField.append(finalInput, finalMeaning);
     finalLabel.append(finalText, finalField);
 
-    editor.append(prefix, recommendationWrap, finalLabel);
+    nameRow.append(prefix, finalLabel);
+    editor.append(nameRow, recommendationWrap);
     row.append(checkbox, img, text, editor);
     els.assetList.appendChild(row);
   });
@@ -1198,7 +1204,7 @@ function makeRecommendations(asset) {
     compactParts([kind, pickTerm(knowledge.stateTerms, "Normal", tags.includes("Normal") ? "Normal" : "常态")]),
     ...mapped.direct,
   ];
-  return [...new Set(candidates.map(removeProjectTermsFromName).map(sanitizeName).filter(Boolean))].slice(0, 5);
+  return [...new Set(candidates.map(removeProjectTermsFromName).map(cleanNamingName).filter(Boolean))].slice(0, 5);
 }
 
 function inferKind(asset, source, tags, componentTerms = []) {
@@ -1225,7 +1231,7 @@ function inferKind(asset, source, tags, componentTerms = []) {
   if (width && height && width > height * 2.6) return pickTerm(componentTerms, "Banner", "Banner");
   if (width && height && Math.abs(width - height) < 8 && width <= 160) return pickTerm(componentTerms, "Icon", pickTag(tags, "Icon", "图标"));
   if (width && height && width >= 600 && height >= 300) return pickTerm(componentTerms, "BG", pickTag(tags, "BG", "背景"));
-  return pickTerm(componentTerms, "Module", pickTag(tags, "Module", "模块"));
+  return pickTerm(componentTerms, "Item", pickTag(tags, "Item", "Item"));
 }
 
 function inferPage(source, pageTerms = []) {
@@ -1415,6 +1421,7 @@ function removeProjectTermsFromName(name) {
 function getProjectTerms() {
   return [
     "Modules",
+    "Module",
     rules.projectName,
     getActiveProject()?.name,
     ...(ngrTrainingKnowledge.projectTerms || []),
@@ -1438,6 +1445,13 @@ function sanitizeName(name) {
     .replace(/^_+|_+$/g, "");
 }
 
+function cleanNamingName(name) {
+  return sanitizeName(name)
+    .split(/_+/)
+    .filter((part) => part && !FORBIDDEN_NAMING_TERMS.includes(part.toLowerCase()))
+    .join("_");
+}
+
 function sanitizePrefix(prefix) {
   return String(prefix || "")
     .trim()
@@ -1447,8 +1461,8 @@ function sanitizePrefix(prefix) {
 }
 
 function appendPart(base, part) {
-  const cleanBase = sanitizeName(base);
-  const cleanPart = sanitizeName(part);
+  const cleanBase = cleanNamingName(base);
+  const cleanPart = cleanNamingName(part);
   if (!cleanBase) return cleanPart;
   if (!cleanPart || cleanBase.endsWith("_" + cleanPart)) return cleanBase;
   return cleanBase + "_" + cleanPart;
@@ -1493,7 +1507,7 @@ async function exportRenamedFiles() {
 }
 
 function buildExportName(asset) {
-  return buildAssetPrefix(asset) + sanitizeName(asset.finalBaseName) + asset.extension;
+  return buildAssetPrefix(asset) + cleanNamingName(asset.finalBaseName) + asset.extension;
 }
 
 function buildAssetPrefix(asset) {

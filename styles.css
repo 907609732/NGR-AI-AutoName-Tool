@@ -925,6 +925,13 @@ button:disabled {
   min-width: 0;
 }
 
+.inline-name-row {
+  display: grid;
+  grid-template-columns: minmax(180px, 0.9fr) minmax(240px, 1.1fr);
+  gap: 12px;
+  min-width: 0;
+}
+
 .inline-prefix {
   display: grid;
   grid-template-columns: 72px minmax(0, 1fr);
@@ -991,6 +998,9 @@ button:disabled {
   grid-template-columns: 72px minmax(0, 1fr);
   gap: 10px;
   align-items: center;
+  padding: 9px 10px;
+  border-radius: 8px;
+  background: var(--surface-2);
 }
 
 .inline-final-field {
@@ -999,7 +1009,7 @@ button:disabled {
 }
 
 .inline-final-name input {
-  height: 38px;
+  height: 34px;
   margin-top: 0;
 }
 
@@ -1014,6 +1024,7 @@ button:disabled {
 @media (max-width: 860px) {
   .job-config label,
   .asset-item,
+  .inline-name-row,
   .inline-prefix,
   .inline-final-name {
     grid-template-columns: 1fr;

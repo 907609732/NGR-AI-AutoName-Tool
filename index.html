@@ -11,7 +11,7 @@
       <header class="topbar">
         <button class="back-button hidden" id="backButton" type="button" aria-label="返回主界面">←</button>
         <div class="topbar-title">
-          <h1>AI辅助UI切图命名工具 <span class="version-badge">V1.4</span></h1>
+          <h1>AI辅助UI切图命名工具 <span class="version-badge">V1.5</span></h1>
           <p id="pageHint">批量整理 UI 切图名称，让文件名保持统一、清楚、可追踪。</p>
         </div>
         <button class="settings-button" id="rulesEntry" type="button" aria-label="命名规则设置" title="命名规则设置">⚙</button>
@@ -32,7 +32,7 @@
 
         <section class="view rules-view" id="rulesView">
           <div class="section-head">
-            <h2>命名规则 <span class="version-badge">V1.4</span></h2>
+            <h2>命名规则 <span class="version-badge">V1.5</span></h2>
             <p>这些设置会自动保存，并在命名流程中作为全局前缀使用。</p>
           </div>
 
@@ -71,7 +71,7 @@
             </label>
             <label class="wide">
               <span>常用标签</span>
-              <input id="tags" type="text" placeholder="BG, Button, Hover, Normal, Icon, Module" />
+              <input id="tags" type="text" placeholder="BG, Button, Hover, Normal, Icon, Item" />
             </label>
           </form>
 
@@ -93,9 +93,9 @@
               <label>
                 <span class="label-with-help">
                   组件词库
-                  <button class="help-button" type="button" aria-label="组件词库说明" data-tooltip="填写常见切图类型，例如 BG、Button、Icon、Banner、Module。用于判断图片是背景、按钮、图标还是模块。">?</button>
+                  <button class="help-button" type="button" aria-label="组件词库说明" data-tooltip="填写常见切图类型，例如 BG、Button、Icon、Banner、Item。用于判断图片是背景、按钮、图标还是通用元素。">?</button>
                 </span>
-                <textarea id="componentTerms" rows="4" placeholder="BG&#10;Button&#10;Icon&#10;Banner&#10;Module"></textarea>
+                <textarea id="componentTerms" rows="4" placeholder="BG&#10;Button&#10;Icon&#10;Banner&#10;Item"></textarea>
               </label>
               <label>
                 <span class="label-with-help">
