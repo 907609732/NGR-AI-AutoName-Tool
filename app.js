@@ -185,6 +185,7 @@ let stopRequested = false;
 let showProblemOnly = false;
 let showDetectionProblemOnly = false;
 let toastTimer = null;
+let activeLexiconCategory = "状态";
 
 const els = {
   backButton: document.querySelector("#backButton"),
@@ -272,6 +273,13 @@ const els = {
   clearDetectionAssets: document.querySelector("#clearDetectionAssets"),
   detectionCount: document.querySelector("#detectionCount"),
   detectionList: document.querySelector("#detectionList"),
+  translatorPanel: document.querySelector("#translatorPanel"),
+  translatorToggle: document.querySelector("#translatorToggle"),
+  translatorClose: document.querySelector("#translatorClose"),
+  translatorInput: document.querySelector("#translatorInput"),
+  translatorToName: document.querySelector("#translatorToName"),
+  translatorExplain: document.querySelector("#translatorExplain"),
+  translatorOutput: document.querySelector("#translatorOutput"),
   toast: document.querySelector("#toast"),
 };
 
@@ -283,6 +291,7 @@ function init() {
   bindUploads();
   bindEditor();
   bindDetection();
+  bindTranslator();
   fillRulesForm();
   fillDetectionProfileForm();
   fillAiSettings();
@@ -622,6 +631,25 @@ function bindDetection() {
     detectionAssets = [];
     renderDetectionList();
     showToast("检测列表已清空");
+  });
+}
+
+function bindTranslator() {
+  els.translatorToggle.addEventListener("click", () => {
+    els.translatorPanel.classList.toggle("collapsed");
+    if (!els.translatorPanel.classList.contains("collapsed")) els.translatorInput.focus();
+  });
+  els.translatorClose.addEventListener("click", () => {
+    els.translatorPanel.classList.add("collapsed");
+  });
+  els.translatorToName.addEventListener("click", () => {
+    const source = normalizeSourceName(els.translatorInput.value);
+    const translated = cleanNamingName(translateFilename(source, parseKnowledge()));
+    els.translatorOutput.textContent = translated || "没有匹配到可用命名词";
+  });
+  els.translatorExplain.addEventListener("click", () => {
+    const source = cleanNamingName(els.translatorInput.value);
+    els.translatorOutput.textContent = explainEnglishName(source);
   });
 }
 
@@ -1256,12 +1284,17 @@ function renderAssetList() {
     const resolution = createMetaLine("分辨率", formatResolution(asset.dimensions));
     const sizeCategory = createMetaLine("规格", asset.sizeCategoryLabel || getSizeCategoryLabel(asset.dimensions));
     const dimensionCheck = createMetaLine("分辨率检查", asset.dimensionIssue ? asset.dimensionIssueMessage : "通过");
+    const duplicateStatus = getDuplicateStatus(asset);
+    const duplicateCheck = createMetaLine("重名检测", duplicateStatus.message);
+    duplicateCheck.classList.toggle("warning-line", duplicateStatus.hasIssue);
+    const historyMatch = getHistoricalModuleMatch();
+    const historyLine = createMetaLine("历史工程", historyMatch ? historyMatch.name + " / " + historyMatch.fileCount + " 张" : "未匹配");
     const status = document.createElement("span");
     status.className = "status-badge status-" + getAssetStatus(asset);
     status.textContent = getAssetStatusText(asset);
     const statusHint = document.createElement("em");
     statusHint.textContent = asset.statusMessage || "";
-    text.append(beforeName, afterName, resolution, sizeCategory, dimensionCheck, status, statusHint);
+    text.append(beforeName, afterName, resolution, sizeCategory, dimensionCheck, duplicateCheck, historyLine, status, statusHint);
 
     const editor = document.createElement("div");
     editor.className = "inline-editor";
@@ -1338,30 +1371,50 @@ function renderAssetList() {
     lexiconSummary.textContent = "词库";
     const lexiconContent = document.createElement("div");
     lexiconContent.className = "lexicon-content";
-    buildLexiconCategories().forEach((category) => {
-      const group = document.createElement("div");
-      group.className = "lexicon-group";
-      const title = document.createElement("span");
-      title.textContent = category.title;
-      const chips = document.createElement("div");
-      chips.className = "lexicon-chips";
-      category.terms.forEach((term) => {
+    const categories = buildLexiconCategories();
+    if (!categories.some((category) => category.title === activeLexiconCategory)) activeLexiconCategory = categories[0]?.title || "";
+    const tabs = document.createElement("div");
+    tabs.className = "lexicon-tabs";
+    const chips = document.createElement("div");
+    chips.className = "lexicon-chips";
+    const renderLexiconTerms = () => {
+      chips.innerHTML = "";
+      const currentParts = new Set(cleanNamingName(asset.finalBaseName).split(/_+/).map((part) => part.toLowerCase()).filter(Boolean));
+      const category = categories.find((item) => item.title === activeLexiconCategory) || categories[0];
+      (category?.terms || []).forEach((term) => {
+        const selected = currentParts.has(term.toLowerCase());
         const chip = document.createElement("button");
         chip.type = "button";
-        chip.className = "lexicon-chip";
+        chip.className = "lexicon-chip" + (selected ? " selected" : "");
         chip.textContent = term;
-        chip.title = explainEnglishName(term);
+        chip.title = selected ? "再次点击移除：" + explainEnglishName(term) : explainEnglishName(term);
         chip.addEventListener("click", () => {
-          asset.finalBaseName = appendLexiconTerm(asset.finalBaseName, term);
+          asset.finalBaseName = toggleLexiconTerm(asset.finalBaseName, term);
           finalInput.value = asset.finalBaseName;
           afterName.querySelector("strong").textContent = asset.finalBaseName ? buildExportName(asset) : "待命名";
           finalMeaning.textContent = "中文含义：" + explainEnglishName(asset.finalBaseName);
+          const nextDuplicateStatus = getDuplicateStatus(asset);
+          duplicateCheck.querySelector("strong").textContent = nextDuplicateStatus.message;
+          duplicateCheck.classList.toggle("warning-line", nextDuplicateStatus.hasIssue);
+          renderLexiconTerms();
         });
         chips.appendChild(chip);
       });
-      group.append(title, chips);
-      lexiconContent.appendChild(group);
+    };
+    categories.forEach((category) => {
+      const tab = document.createElement("button");
+      tab.type = "button";
+      tab.className = "lexicon-tab" + (category.title === activeLexiconCategory ? " active" : "");
+      tab.textContent = category.title;
+      tab.addEventListener("click", () => {
+        activeLexiconCategory = category.title;
+        tabs.querySelectorAll(".lexicon-tab").forEach((node) => node.classList.toggle("active", node === tab));
+        renderLexiconTerms();
+      });
+      tabs.appendChild(tab);
     });
+    renderLexiconTerms();
+    lexiconContent.append(tabs, chips);
     lexiconWrap.append(lexiconSummary, lexiconContent);
 
     nameRow.append(prefix, finalLabel);
@@ -1474,10 +1527,13 @@ function makeRecommendations(asset) {
 
 function buildLexiconCategories() {
   const knowledge = parseKnowledge();
+  const historicalMatch = getHistoricalModuleMatch();
   const dynamicCategories = [
     { title: "当前组件词库", terms: knowledge.componentTerms },
     { title: "当前状态词库", terms: knowledge.stateTerms },
+    { title: "历史高频", terms: getHistoricalCommonTerms() },
   ];
+  if (historicalMatch) dynamicCategories.unshift({ title: "当前工程历史", terms: historicalMatch.terms.map((item) => item.word) });
   return [...lexiconCategories, ...dynamicCategories]
     .map((category) => ({
       title: category.title,
@@ -1506,6 +1562,54 @@ function appendLexiconTerm(currentName, term) {
   const parts = cleanNamingName(currentName).split(/_+/).filter(Boolean);
   if (parts.some((part) => part.toLowerCase() === cleanTerm.toLowerCase())) return parts.join("_");
   return [...parts, cleanTerm].join("_");
+}
+
+function toggleLexiconTerm(currentName, term) {
+  const cleanTerm = cleanNamingName(term);
+  if (!cleanTerm) return cleanNamingName(currentName);
+  const parts = cleanNamingName(currentName).split(/_+/).filter(Boolean);
+  const nextParts = parts.filter((part) => part.toLowerCase() !== cleanTerm.toLowerCase());
+  if (nextParts.length !== parts.length) return nextParts.join("_");
+  return [...parts, cleanTerm].join("_");
+}
+
+function getHistoricalKnowledge() {
+  return window.NGR_HISTORICAL_KNOWLEDGE || null;
+}
+
+function getHistoricalCommonTerms() {
+  return (getHistoricalKnowledge()?.commonTerms || []).slice(0, 80).map((item) => item.word);
+}
+
+function normalizeHistoryKey(value) {
+  return sanitizeName(value).replace(/UI$/i, "").replace(/[^A-Za-z0-9]/g, "").toLowerCase();
+}
+
+function getHistoricalModuleMatch() {
+  const knowledge = getHistoricalKnowledge();
+  if (!knowledge?.modules) return null;
+  const candidates = [
+    rules.projectName,
+    els.workProjectName?.value,
+    getActiveProject()?.name,
+  ].map(normalizeHistoryKey).filter(Boolean);
+  for (const candidate of candidates) {
+    if (knowledge.modules[candidate]) return knowledge.modules[candidate];
+  }
+  return null;
+}
+
+function getDuplicateStatus(asset) {
+  if (!asset.finalBaseName) return { hasIssue: false, message: "待命名" };
+  const exportName = buildExportName(asset).toLowerCase();
+  const batchCount = assets.filter((item) => item.finalBaseName && buildExportName(item).toLowerCase() === exportName).length;
+  if (batchCount > 1) return { hasIssue: true, message: "当前批次重名" };
+  const historicalMatch = getHistoricalModuleMatch();
+  const historicalNames = historicalMatch?.filenames || [];
+  if (historicalNames.some((name) => String(name).toLowerCase() === exportName)) {
+    return { hasIssue: true, message: "历史重名：" + historicalMatch.name };
+  }
+  return historicalMatch ? { hasIssue: false, message: "未重名 / 已匹配 " + historicalMatch.name } : { hasIssue: false, message: "未匹配历史工程" };
 }
 
 function inferKind(asset, source, tags, componentTerms = []) {

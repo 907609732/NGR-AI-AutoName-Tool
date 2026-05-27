@@ -996,6 +996,11 @@ button:disabled {
   overflow-wrap: anywhere;
 }
 
+.meta-line.warning-line span,
+.meta-line.warning-line strong {
+  color: var(--danger);
+}
+
 .inline-editor {
   display: grid;
   gap: 12px;
@@ -1063,19 +1068,29 @@ button:disabled {
   padding: 0 10px 10px;
 }
 
-.lexicon-group {
-  display: grid;
-  grid-template-columns: 64px minmax(0, 1fr);
-  gap: 8px;
-  align-items: start;
+.lexicon-tabs {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding-bottom: 2px;
 }
 
-.lexicon-group > span {
-  padding-top: 5px;
+.lexicon-tab {
+  min-height: 28px;
+  padding: 0 10px;
+  border: 1px solid #b8c8ce;
+  border-radius: 999px;
+  background: #fff;
   color: var(--muted);
   font-size: 12px;
   font-weight: 750;
   white-space: nowrap;
+}
+
+.lexicon-tab.active {
+  border-color: var(--primary);
+  background: #eafafa;
+  color: var(--primary);
 }
 
 .lexicon-chips {
@@ -1099,6 +1114,12 @@ button:disabled {
   border-color: var(--primary);
   color: var(--primary);
   background: #f6fbfb;
+}
+
+.lexicon-chip.selected {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: #fff;
 }
 
 .recommendations.compact {
@@ -1204,6 +1225,85 @@ button:disabled {
   background: #f7fcf9;
 }
 
+.translator-panel {
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  z-index: 30;
+  width: min(360px, calc(100vw - 36px));
+}
+
+.translator-toggle {
+  display: none;
+  width: 86px;
+  min-height: 40px;
+  margin-left: auto;
+  border: 1px solid var(--primary);
+  border-radius: 999px;
+  background: var(--primary);
+  color: #fff;
+  font-weight: 800;
+  box-shadow: 0 12px 28px rgba(23, 126, 137, 0.22);
+}
+
+.translator-body {
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: 0 18px 42px rgba(27, 36, 40, 0.14);
+}
+
+.translator-panel.collapsed {
+  width: auto;
+}
+
+.translator-panel.collapsed .translator-toggle {
+  display: block;
+}
+
+.translator-panel.collapsed .translator-body {
+  display: none;
+}
+
+.translator-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.translator-head button {
+  width: 30px;
+  min-height: 30px;
+  padding: 0;
+  border-radius: 50%;
+}
+
+.translator-body textarea {
+  min-height: 92px;
+  resize: vertical;
+}
+
+.translator-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.translator-output {
+  min-height: 44px;
+  margin-top: 10px;
+  padding: 10px;
+  border-radius: 8px;
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+
 @media (max-width: 860px) {
   .home-view {
     grid-template-columns: minmax(260px, 1fr);
@@ -1215,8 +1315,7 @@ button:disabled {
   .asset-item,
   .inline-name-row,
   .inline-prefix,
-  .inline-final-name,
-  .lexicon-group {
+  .inline-final-name {
     grid-template-columns: 1fr;
   }
 

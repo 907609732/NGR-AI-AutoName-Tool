@@ -11,7 +11,7 @@
       <header class="topbar">
         <button class="back-button hidden" id="backButton" type="button" aria-label="返回主界面">←</button>
         <div class="topbar-title">
-          <h1>NGRAI辅助UI切图命名工具 <span class="version-badge">V1.13</span></h1>
+          <h1>NGRAI辅助UI切图命名工具 <span class="version-badge">V1.14</span></h1>
           <p id="pageHint">批量整理 UI 切图名称，让文件名保持统一、清楚、可追踪。</p>
         </div>
         <button class="settings-button" id="rulesEntry" type="button" aria-label="命名规则设置" title="命名规则设置">⚙</button>
@@ -36,7 +36,7 @@
 
         <section class="view rules-view" id="rulesView">
           <div class="section-head">
-            <h2>命名规则 <span class="version-badge">V1.13</span></h2>
+            <h2>命名规则 <span class="version-badge">V1.14</span></h2>
             <p>这些设置会自动保存，并在命名流程中作为全局前缀使用。</p>
           </div>
 
@@ -390,10 +390,27 @@
         </section>
       </main>
 
+      <aside class="translator-panel collapsed" id="translatorPanel">
+        <button class="translator-toggle" id="translatorToggle" type="button">翻译</button>
+        <div class="translator-body">
+          <div class="translator-head">
+            <strong>命名单词翻译</strong>
+            <button id="translatorClose" type="button" aria-label="收起翻译面板">×</button>
+          </div>
+          <textarea id="translatorInput" rows="4" placeholder="输入中文文件名、英文命名或单词"></textarea>
+          <div class="translator-actions">
+            <button id="translatorToName" class="primary-action" type="button">生成命名词</button>
+            <button id="translatorExplain" class="ghost-action" type="button">解释英文</button>
+          </div>
+          <div class="translator-output" id="translatorOutput">展开后可快速翻译中文文件名或解释英文命名。</div>
+        </div>
+      </aside>
+
       <div id="toast" class="toast hidden" role="status"></div>
     </div>
 
     <script src="local-config.js"></script>
+    <script src="historical-knowledge.js"></script>
     <script src="app.js"></script>
   </body>
 </html>
