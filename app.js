@@ -183,6 +183,7 @@ const els = {
     rules: document.querySelector("#rulesView"),
     work: document.querySelector("#workView"),
     detect: document.querySelector("#detectView"),
+    detectionSettings: document.querySelector("#detectionSettingsView"),
   },
   rulesEntry: document.querySelector("#rulesEntry"),
   workEntry: document.querySelector("#workEntry"),
@@ -240,6 +241,8 @@ const els = {
   problemFilter: document.querySelector("#problemFilter"),
   removeSelected: document.querySelector("#removeSelected"),
   detectionProfileSelect: document.querySelector("#detectionProfileSelect"),
+  detectionSettingsEntry: document.querySelector("#detectionSettingsEntry"),
+  detectionSettingsProfileSelect: document.querySelector("#detectionSettingsProfileSelect"),
   detectionProfileName: document.querySelector("#detectionProfileName"),
   detectionMaxSide: document.querySelector("#detectionMaxSide"),
   detectionBgWidth: document.querySelector("#detectionBgWidth"),
@@ -250,6 +253,7 @@ const els = {
   saveDetectionProfile: document.querySelector("#saveDetectionProfile"),
   newDetectionProfile: document.querySelector("#newDetectionProfile"),
   deleteDetectionProfile: document.querySelector("#deleteDetectionProfile"),
+  backToDetection: document.querySelector("#backToDetection"),
   detectionDropZone: document.querySelector("#detectionDropZone"),
   detectionFolderInput: document.querySelector("#detectionFolderInput"),
   detectionSingleInput: document.querySelector("#detectionSingleInput"),
@@ -286,6 +290,8 @@ function bindNavigation() {
   els.rulesEntry.addEventListener("click", () => showView("rules"));
   els.workEntry.addEventListener("click", () => showView("work"));
   els.detectEntry.addEventListener("click", () => showView("detect"));
+  els.detectionSettingsEntry.addEventListener("click", () => showView("detectionSettings"));
+  els.backToDetection.addEventListener("click", () => showView("detect"));
   els.backButton.addEventListener("click", () => showView("home"));
 }
 
@@ -297,6 +303,7 @@ function showView(name) {
     rules: "配置全局命名前缀、分隔符与通用标签。工程名可在开始命名页按当前界面填写。",
     work: "填写当前界面工程名，上传切图后可在每张图片旁边直接改名。",
     detect: "上传切图文件夹，按项目组规则检测分辨率是否符合规范。",
+    detectionSettings: "单独配置 UI 切图检测项目组和分辨率参数。",
   };
   els.pageHint.textContent = hints[name];
 }
@@ -582,10 +589,10 @@ function bindDetection() {
     addDetectionFiles(files);
   });
   els.detectionProfileSelect.addEventListener("change", () => {
-    activeDetectionProfileId = els.detectionProfileSelect.value;
-    localStorage.setItem(ACTIVE_DETECTION_PROFILE_KEY, activeDetectionProfileId);
-    fillDetectionProfileForm();
-    revalidateDetectionAssets();
+    switchDetectionProfile(els.detectionProfileSelect.value);
+  });
+  els.detectionSettingsProfileSelect.addEventListener("change", () => {
+    switchDetectionProfile(els.detectionSettingsProfileSelect.value);
   });
   [els.detectionProfileName, els.detectionMaxSide, els.detectionBgWidth, els.detectionBgHeight, els.detectionLargeThreshold, els.detectionLargeMultiple, els.detectionAtlasMultiple].forEach((input) => {
     input.addEventListener("input", () => {
@@ -605,6 +612,14 @@ function bindDetection() {
     renderDetectionList();
     showToast("检测列表已清空");
   });
+}
+
+function switchDetectionProfile(profileId) {
+  activeDetectionProfileId = profileId;
+  localStorage.setItem(ACTIVE_DETECTION_PROFILE_KEY, activeDetectionProfileId);
+  renderDetectionProfileSelect();
+  fillDetectionProfileForm();
+  revalidateDetectionAssets();
 }
 
 async function collectDroppedFiles(dataTransfer) {
@@ -2040,13 +2055,21 @@ function renderProjectSelect() {
 
 function renderDetectionProfileSelect() {
   els.detectionProfileSelect.innerHTML = "";
+  els.detectionSettingsProfileSelect.innerHTML = "";
   detectionProfiles.forEach((profile) => {
     const option = document.createElement("option");
     option.value = profile.id;
     option.textContent = profile.name;
     option.selected = profile.id === activeDetectionProfileId;
     els.detectionProfileSelect.appendChild(option);
+    const settingsOption = document.createElement("option");
+    settingsOption.value = profile.id;
+    settingsOption.textContent = profile.name;
+    settingsOption.selected = profile.id === activeDetectionProfileId;
+    els.detectionSettingsProfileSelect.appendChild(settingsOption);
   });
+  els.detectionProfileSelect.value = activeDetectionProfileId;
+  els.detectionSettingsProfileSelect.value = activeDetectionProfileId;
 }
 
 function fillDetectionProfileForm() {

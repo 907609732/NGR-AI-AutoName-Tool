@@ -11,7 +11,7 @@
       <header class="topbar">
         <button class="back-button hidden" id="backButton" type="button" aria-label="返回主界面">←</button>
         <div class="topbar-title">
-          <h1>AI辅助UI切图命名工具 <span class="version-badge">V1.7</span></h1>
+          <h1>AI辅助UI切图命名工具 <span class="version-badge">V1.8</span></h1>
           <p id="pageHint">批量整理 UI 切图名称，让文件名保持统一、清楚、可追踪。</p>
         </div>
         <button class="settings-button" id="rulesEntry" type="button" aria-label="命名规则设置" title="命名规则设置">⚙</button>
@@ -36,7 +36,7 @@
 
         <section class="view rules-view" id="rulesView">
           <div class="section-head">
-            <h2>命名规则 <span class="version-badge">V1.7</span></h2>
+            <h2>命名规则 <span class="version-badge">V1.8</span></h2>
             <p>这些设置会自动保存，并在命名流程中作为全局前缀使用。</p>
           </div>
 
@@ -293,6 +293,55 @@
               <p>上传文件夹图片后检测分辨率是否符合当前项目组要求。</p>
             </div>
             <div class="toolbar-actions">
+              <label class="toolbar-select">
+                <span>检测项目组</span>
+                <select id="detectionProfileSelect"></select>
+              </label>
+              <button id="detectionSettingsEntry" class="ghost-action" type="button">检测设置</button>
+            </div>
+          </div>
+
+          <div class="upload-grid detection-upload-grid" id="detectionDropZone">
+            <label class="upload-panel">
+              <span>上传检测文件夹</span>
+              <small>支持 PNG、JPG、JPEG、WebP、GIF、SVG，可拖入文件夹</small>
+              <input id="detectionFolderInput" type="file" webkitdirectory multiple accept="image/*,.svg" />
+            </label>
+            <label class="upload-panel">
+              <span>补充上传单张图片</span>
+              <small>支持 PNG、JPG、JPEG、WebP、GIF、SVG</small>
+              <input id="detectionSingleInput" type="file" multiple accept="image/*,.svg" />
+            </label>
+          </div>
+
+          <div class="batch-tools list-batch-tools">
+            <button id="detectionProblemFilter" class="ghost-action" type="button" aria-pressed="false">只看问题图片</button>
+            <button id="clearDetectionAssets" class="danger-action" type="button">清空检测列表</button>
+          </div>
+
+          <div class="asset-list detection-list-wrap">
+            <div class="list-head">
+              <strong>检测结果</strong>
+              <span id="detectionCount">0 张</span>
+            </div>
+            <div id="detectionList" class="asset-list-body empty-state">请先上传需要检测的切图文件夹</div>
+          </div>
+
+          <div class="signature page-signature">
+            <span>by五成（月财）</span>
+            <a href="https://github.com/907609732/NGR-AI-AutoName-Tool.git" target="_blank" rel="noreferrer">GitHub：907609732/NGR-AI-AutoName-Tool</a>
+            <p>若有合作意向或意见建议，可发送邮件至 907609732@qq.com，也欢迎前往 GitHub 提交反馈。</p>
+          </div>
+        </section>
+
+        <section class="view detection-settings-view" id="detectionSettingsView">
+          <div class="work-toolbar">
+            <div>
+              <h2>检测设置</h2>
+              <p>单独配置 UI 切图检测项目组和分辨率规则。</p>
+            </div>
+            <div class="toolbar-actions">
+              <button id="backToDetection" class="ghost-action" type="button">返回检测</button>
               <button id="saveDetectionProfile" class="primary-action" type="button">保存检测参数</button>
               <button id="newDetectionProfile" class="ghost-action" type="button">新增项目组</button>
               <button id="deleteDetectionProfile" class="danger-action" type="button">删除项目组</button>
@@ -302,7 +351,7 @@
           <div class="detection-config">
             <label>
               <span>检测项目组</span>
-              <select id="detectionProfileSelect"></select>
+              <select id="detectionSettingsProfileSelect"></select>
             </label>
             <label>
               <span>项目组名称</span>
@@ -332,32 +381,6 @@
               <span>图集倍数</span>
               <input id="detectionAtlasMultiple" type="number" min="1" step="1" />
             </label>
-          </div>
-
-          <div class="upload-grid detection-upload-grid" id="detectionDropZone">
-            <label class="upload-panel">
-              <span>上传检测文件夹</span>
-              <small>支持 PNG、JPG、JPEG、WebP、GIF、SVG，可拖入文件夹</small>
-              <input id="detectionFolderInput" type="file" webkitdirectory multiple accept="image/*,.svg" />
-            </label>
-            <label class="upload-panel">
-              <span>补充上传单张图片</span>
-              <small>支持 PNG、JPG、JPEG、WebP、GIF、SVG</small>
-              <input id="detectionSingleInput" type="file" multiple accept="image/*,.svg" />
-            </label>
-          </div>
-
-          <div class="batch-tools list-batch-tools">
-            <button id="detectionProblemFilter" class="ghost-action" type="button" aria-pressed="false">只看问题图片</button>
-            <button id="clearDetectionAssets" class="danger-action" type="button">清空检测列表</button>
-          </div>
-
-          <div class="asset-list detection-list-wrap">
-            <div class="list-head">
-              <strong>检测结果</strong>
-              <span id="detectionCount">0 张</span>
-            </div>
-            <div id="detectionList" class="asset-list-body empty-state">请先上传需要检测的切图文件夹</div>
           </div>
 
           <div class="signature page-signature">

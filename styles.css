@@ -456,6 +456,21 @@ button:disabled {
   margin-top: 0;
 }
 
+.toolbar-select {
+  display: grid;
+  grid-template-columns: auto minmax(160px, 220px);
+  gap: 8px;
+  align-items: center;
+}
+
+.toolbar-select span {
+  white-space: nowrap;
+}
+
+.toolbar-select select {
+  height: 42px;
+}
+
 .primary-action,
 .success-action,
 .ghost-action,
