@@ -1014,6 +1014,7 @@ function buildAiPrompt(asset, localRecommendations) {
     "只返回 JSON，格式为：{\"names\":[\"Login_Button_Hover\",\"Home_BG\"]}。",
     "不要包含固定前缀、工程名、文件扩展名。名称只允许英文字母、数字和下划线，使用 Pascal/Title 英文词组并以下划线连接。",
     "命名单词禁止出现 Module 或 Modules；如果需要表达通用元素，请使用 Item、Panel、Card、Icon、BG 等更具体词。",
+    "命名单词禁止出现 Background；凡是背景、底图、底、background、Background，都必须使用短词 BG。",
     "原始文件名：" + asset.originalBase + asset.extension,
     "当前前缀：" + buildAssetPrefix(asset),
     "本地候选：" + localRecommendations.join(", "),
@@ -1960,8 +1961,19 @@ function sanitizeName(name) {
 function cleanNamingName(name) {
   return sanitizeName(name)
     .split(/_+/)
+    .map(normalizeNamingPart)
     .filter((part) => part && !FORBIDDEN_NAMING_TERMS.includes(part.toLowerCase()))
     .join("_");
+}
+
+function normalizeNamingPart(part) {
+  const aliases = {
+    bg: "BG",
+    background: "BG",
+    backgrounds: "BG",
+  };
+  const clean = sanitizeName(part);
+  return aliases[clean.toLowerCase()] || clean;
 }
 
 function shouldUseLowercaseNaming() {
@@ -2887,7 +2899,9 @@ function normalizeLoadedRules(nextRules) {
 
 function enforceNamingRuleAliases(ruleText) {
   const overrides = {
+    bg: "BG",
     background: "BG",
+    backgrounds: "BG",
     reward: "Rewards",
     rewards: "Rewards",
     gloryreward: "GloryRewards",
