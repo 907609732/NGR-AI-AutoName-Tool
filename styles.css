@@ -32,6 +32,12 @@ select {
   font: inherit;
 }
 
+input,
+textarea {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
 button {
   cursor: pointer;
 }

@@ -341,6 +341,7 @@ function init() {
   bindEditor();
   bindDetection();
   bindTranslator();
+  protectEditableShortcuts();
   fillRulesForm();
   fillDetectionProfileForm();
   fillAiSettings();
@@ -353,6 +354,16 @@ function init() {
   syncWorkProjectFields();
   updateRulePreview();
   updateActiveRuleText();
+}
+
+function protectEditableShortcuts(root = document) {
+  root.querySelectorAll("input, textarea").forEach((field) => {
+    if (field.dataset.shortcutProtected) return;
+    field.dataset.shortcutProtected = "true";
+    ["keydown", "keyup", "keypress", "copy", "cut", "paste"].forEach((eventName) => {
+      field.addEventListener(eventName, (event) => event.stopPropagation());
+    });
+  });
 }
 
 function bindNavigation() {
@@ -1471,6 +1482,7 @@ function renderAssetList() {
     row.append(checkbox, img, text, editor);
     els.assetList.appendChild(row);
   });
+  protectEditableShortcuts(els.assetList);
 }
 
 function renderDetectionList() {
