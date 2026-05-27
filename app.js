@@ -1157,7 +1157,7 @@ function validateDetectionDimensions(dimensions, profile) {
       messages.push("单边超过" + config.largeThreshold + "的大图需要是" + config.largeMultiple + "的倍数");
     }
   } else if (width % config.atlasMultiple !== 0 || height % config.atlasMultiple !== 0) {
-    messages.push(config.largeThreshold + "以下图集需要是" + config.atlasMultiple + "的倍数");
+    messages.push("分辨率" + config.largeThreshold + "px以下的图片只要不是单数就行");
   }
 
   return {
