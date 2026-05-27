@@ -1343,6 +1343,8 @@ function renderAssetList() {
     text.className = "asset-meta";
     const beforeName = createMetaLine("修改前名称", asset.originalBase + asset.extension);
     const afterName = createMetaLine("修改后名称", asset.finalBaseName ? buildExportName(asset) : "待命名");
+    beforeName.classList.add("full-line");
+    afterName.classList.add("full-line", "after-name-line");
     const resolution = createMetaLine("分辨率", formatResolution(asset.dimensions));
     const sizeCategory = createMetaLine("规格", asset.sizeCategoryLabel || getSizeCategoryLabel(asset.dimensions));
     const dimensionCheck = createMetaLine("分辨率检查", asset.dimensionIssue ? asset.dimensionIssueMessage : "通过");

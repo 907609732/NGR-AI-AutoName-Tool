@@ -989,6 +989,10 @@ button:disabled {
   margin-bottom: 0;
 }
 
+.meta-line.full-line {
+  grid-column: 1 / -1;
+}
+
 .meta-line span {
   margin-top: 0;
   color: var(--muted);
@@ -1004,6 +1008,11 @@ button:disabled {
   font-weight: 650;
   line-height: 1.35;
   overflow-wrap: anywhere;
+}
+
+.after-name-line strong {
+  white-space: normal;
+  word-break: break-all;
 }
 
 .work-view .status-badge {
