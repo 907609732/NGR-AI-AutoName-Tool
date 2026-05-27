@@ -35,15 +35,24 @@ const yyslsTrainingKnowledge = {
   tags: "bg, btn, icon, line, frame, mask, tab, sel, nml, hover, ban, pinyin, lower_case",
   pageTerms: [
     "login", "loading", "face", "career", "huijuan", "task", "home", "mainpage", "nielian", "yuxue", "shequ", "yulan",
-    "kaifeng", "qiyu", "fenzhi", "coures", "courses", "dialoge", "bm", "vx", "com"
+    "kaifeng", "qiyu", "fenzhi", "coures", "courses", "dialoge", "bm", "vx", "com", "map", "banner", "menpai",
+    "shop", "world", "hud", "skill", "baiye", "wulinlu", "modular", "model", "waiguan", "activity", "collection",
+    "player", "talk", "billboard", "buff", "equip", "bangpai", "huizhang", "xinhu", "sundries", "wuxue", "chengjiu",
+    "bag", "qishu", "shusheng", "guide", "tianfu", "entity", "hanghui", "pvp", "photo", "setting", "yezixi",
+    "xinfa", "building", "reward", "debate", "hangdang", "tyro", "toushi", "fuben", "huisu", "xiaofei", "weather"
   ].join("\n"),
   componentTerms: [
     "bg", "btn", "icon", "line", "frame", "mask", "tab", "item", "title", "pop", "bar", "pro", "slider", "floor",
     "pic", "head", "body", "circle", "light", "shadow", "glow", "dian", "diban", "diwen", "huawen", "zhuangshi",
-    "jianbian", "tishi", "erweima", "lunpan", "jindu", "guide", "name", "photo", "share", "voice", "play", "pause"
+    "jianbian", "tishi", "erweima", "lunpan", "jindu", "guide", "name", "photo", "share", "voice", "play", "pause",
+    "emotion", "ui", "96", "144", "v3", "v2", "01", "02", "03", "04", "head", "qishu", "baiye", "npc", "tips",
+    "lizi", "loop", "lod", "kfc", "wave", "decorate", "text", "keyboard", "base", "page", "mobile", "collection",
+    "thumbnail", "png", "girl", "black", "white", "gold", "blue", "arrow", "card", "point", "tip", "flow",
+    "par", "deco", "flower", "team", "sound", "portrait", "clouds", "fire", "wood"
   ].join("\n"),
   stateTerms: [
-    "nml", "sel", "hover", "ban", "focus", "dark", "light", "unlock", "x", "z", "l", "d", "left", "right", "zuo", "you"
+    "nml", "sel", "hover", "ban", "focus", "dark", "light", "lock", "unlock", "normal", "selected", "disabled",
+    "x", "z", "l", "d", "left", "right", "top", "bottom", "long", "big", "small", "pc", "mobile", "zuo", "you"
   ].join("\n"),
   filenameRules: [
     "常态=nml", "默认=nml", "普通=nml", "选中=sel", "选择=sel", "悬浮=hover", "禁用=ban", "不可用=ban", "焦点=focus",
@@ -57,10 +66,11 @@ const yyslsTrainingKnowledge = {
     "ban=ban", "focus=focus", "dark=dark", "light=light"
   ].join("\n"),
   contextDocs: [
-    "燕云十六声 / yysls 历史切图命名习惯：文件名几乎全部使用小写字母、数字和下划线，不使用 PascalCase。",
+    "燕云十六声 / yysls 历史切图命名习惯：已完整扫描 Resources/png 目录 28080 张 PNG，其中 27025 个文件名为全小写，26315 个使用下划线分段；命名以小写 snake_case 为主，不使用 PascalCase。",
     "命名结构通常为：页面或系统前缀_功能语义_组件类型_状态，例如 login_btn_nml、loading_secrecy_btn_sel、face_create_btn_right_bg_zhu_nml。",
     "中英混合但以拼音为主：nielian、jianbian、huawen、zhuangshi、diban、erweima、xuanze、yulan、shequ、lunpan、zuobian、youbian 等可直接作为命名词。",
-    "英文多用短词或缩写：bg、btn、icon、line、frame、mask、tab、item、title、pop、bar、pro、slider、light、dark。",
+    "高频页面/系统前缀包括：vx、com、map、home、banner、ui、menpai、shop、icon、head、world、hud、skill、task、baiye、wulinlu、modular、model、face、waiguan、activity、collection、player、talk、equip、wuxue、hanghui。",
+    "英文多用短词或缩写：bg、btn、icon、line、frame、mask、tab、item、title、pop、bar、pro、slider、pic、head、circle、light、glow、shadow、guide、mask。",
     "状态词固定倾向：nml=常态，sel=选中，hover=悬浮，ban=禁用，focus=焦点；不要生成 Normal、Selected、Disabled 这类长英文状态词。",
     "最终名称必须保持全小写 snake_case，用下划线连接；如果中文原名包含拼音习惯词，优先保留拼音而不是翻译成长英文。"
   ].join("\n")
