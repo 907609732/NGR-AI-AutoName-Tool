@@ -6,13 +6,13 @@ const AI_SETTINGS_KEY = "ngr-ai-autoname-ai-settings";
 const DETECTION_PROFILES_KEY = "ngr-ai-autoname-detection-profiles";
 const ACTIVE_DETECTION_PROFILE_KEY = "ngr-ai-autoname-active-detection-profile";
 const IMAGE_TYPES = ["image/png", "image/jpeg", "image/webp", "image/gif", "image/svg+xml"];
-const NGR_TRAINING_VERSION = 4;
+const NGR_TRAINING_VERSION = 5;
 const FORBIDDEN_NAMING_TERMS = ["module", "modules"];
 const lexiconCategories = [
   { title: "状态", terms: ["Normal", "Hover", "Pressed", "Disabled", "Selected", "Unselected", "Active", "Lock", "Unlock"] },
   { title: "类型", terms: ["BG", "Button", "Icon", "Line", "Frame", "Mask", "Card", "Tab", "Panel", "Item"] },
   { title: "装饰", terms: ["Light", "Shadow", "Pattern", "Ornament", "Deco", "Glow", "Spark", "Ribbon"] },
-  { title: "内容", terms: ["Illustration", "Character", "Weapon", "Reward", "Gift", "Badge", "Logo", "Avatar"] },
+  { title: "内容", terms: ["Illustration", "Character", "Weapon", "Rewards", "Gift", "Badge", "Logo", "Avatar"] },
   { title: "方向", terms: ["Left", "Right", "Top", "Bottom", "Center", "Front", "Back", "Corner"] },
   { title: "颜色", terms: ["Red", "Blue", "Yellow", "Green", "Black", "White", "Gold", "Purple"] },
 ];
@@ -26,7 +26,7 @@ const defaultRules = {
   pageTerms: "Home\nLogin\nProfile\nSettings",
   componentTerms: "BG\nButton\nIcon\nBanner\nNav\nItem",
   stateTerms: "Normal\nHover\nActive\nDisabled",
-  filenameRules: "首页=Home\n主页=Home\n登录=Login\n登陆=Login\n个人中心=Profile\n我的=Profile\n设置=Settings\n背景=BG\n底图=BG\n按钮=Button\n图标=Icon\n导航=Nav\n横幅=Banner\n模块=Item\n常态=Normal\n默认=Normal\n悬浮=Hover\n选中=Active\n点击=Active\n禁用=Disabled\n不可用=Disabled\nbg=BG\nbackground=BG\nbtn=Button\nbutton=Button\nicon=Icon\nhover=Hover\nactive=Active\ndisabled=Disabled\nhome=Home\nlogin=Login\nuser=Profile",
+  filenameRules: "首页=Home\n主页=Home\n登录=Login\n登陆=Login\n个人中心=Profile\n我的=Profile\n设置=Settings\n背景=BG\n底图=BG\n底=BG\n背景图=BG\n按钮=Button\n图标=Icon\n导航=Nav\n横幅=Banner\n模块=Item\n奖励=Rewards\n常态=Normal\n默认=Normal\n悬浮=Hover\n选中=Active\n点击=Active\n禁用=Disabled\n不可用=Disabled\nbg=BG\nbackground=BG\nBackground=BG\nReward=Rewards\nRewards=Rewards\nbtn=Button\nbutton=Button\nicon=Icon\nhover=Hover\nactive=Active\ndisabled=Disabled\nhome=Home\nlogin=Login\nuser=Profile",
   contextDocs: "",
 };
 
@@ -70,7 +70,7 @@ const ngrTrainingKnowledge = {
   componentTerms: [
     "BG", "Bg", "Button", "Btn", "Icon", "Banner", "Nav", "Item", "Line", "Bar", "ProgressBar", "Frame", "Mask", "Light",
     "Pattern", "Tab", "Card", "Item", "Panel", "Container", "Arrow", "Sprite", "Title", "Text", "Txt", "Number", "Num", "Point",
-    "Circle", "Bubble", "Logo", "Tag", "Lock", "Unlock", "Popup", "Toast", "Broadcast", "Recommend", "Reward", "GloryReward", "Guide",
+    "Circle", "Bubble", "Logo", "Tag", "Lock", "Unlock", "Popup", "Toast", "Broadcast", "Recommend", "Rewards", "GloryRewards", "Guide",
     "GuideKey", "Key", "Map", "Skill", "SkillBg", "HeadBg", "TitleBg", "MainBg", "IconBg", "AvatarMask", "Progress", "Quality",
     "Settlement", "Ranking", "Challenge", "InvitationNotice", "Airdrop", "ShadowTrial", "Resonance", "DailyFreeGiftPack", "NPC", "Gold",
     "Switch", "UpGrade", "Vegetable", "Badge", "Loading", "PlayerPet", "Task", "Game", "Inscription", "Level", "Box", "Shadow", "Arena",
@@ -89,7 +89,7 @@ const ngrTrainingKnowledge = {
     "Sel=Selected", "Select=Selected", "Selected=Selected", "UnSel=Unselected", "Nml=Normal", "Normal=Normal", "Hover=Hover",
     "Active=Active", "Disabled=Disabled", "Forbidden=Forbidden", "PressedDwon=PressedDown", "PressedDown=PressedDown", "Check=Check",
     "Pick=Pick", "Ban=Ban", "Lock=Lock", "Unlock=Unlock", "Popup=Popup", "Toast=Toast", "Broadcast=Broadcast", "Recommend=Recommend",
-    "Reward=Reward", "GuideKey=GuideKey", "TitleBg=Title_BG", "MainBg=Main_BG", "IconBg=Icon_BG", "Bp=BattlePass", "AMatch=ArenaMatch",
+    "Reward=Rewards", "Rewards=Rewards", "GloryReward=GloryRewards", "GloryRewards=GloryRewards", "Background=BG", "background=BG", "底=BG", "背景图=BG", "GuideKey=GuideKey", "TitleBg=Title_BG", "MainBg=Main_BG", "IconBg=Icon_BG", "Bp=BattlePass", "AMatch=ArenaMatch",
     "VX=VFX"
   ].join("\n"),
   contextDocs: [
@@ -152,11 +152,14 @@ const builtinTranslations = {
   设置: "Settings",
   背景: "BG",
   底图: "BG",
+  背景图: "BG",
+  底: "BG",
   按钮: "Button",
   图标: "Icon",
   导航: "Nav",
   横幅: "Banner",
   模块: "Item",
+  奖励: "Rewards",
   常态: "Normal",
   默认: "Normal",
   悬浮: "Hover",
@@ -1664,12 +1667,58 @@ function buildChineseMeaningDictionary() {
   return {
     ...dictionary,
     bg: dictionary.bg || "背景",
+    button: dictionary.button || "按钮",
+    icon: dictionary.icon || "图标",
+    line: dictionary.line || "线条",
+    frame: dictionary.frame || "边框",
+    mask: dictionary.mask || "遮罩",
+    card: dictionary.card || "卡片",
+    tab: dictionary.tab || "标签",
+    panel: dictionary.panel || "面板",
+    item: dictionary.item || "通用元素",
     nav: dictionary.nav || "导航",
     cta: "主按钮",
     popup: "弹窗",
-    module: dictionary.module || "模块",
+    illustration: dictionary.illustration || "插图",
+    character: dictionary.character || "角色",
+    weapon: dictionary.weapon || "武器",
+    rewards: dictionary.rewards || "奖励",
+    reward: dictionary.reward || "奖励",
+    gift: dictionary.gift || "礼物",
+    badge: dictionary.badge || "徽章",
+    logo: dictionary.logo || "标识",
+    avatar: dictionary.avatar || "头像",
+    light: dictionary.light || "光效",
+    shadow: dictionary.shadow || "阴影",
+    pattern: dictionary.pattern || "纹理",
+    ornament: dictionary.ornament || "装饰",
+    deco: dictionary.deco || "装饰",
+    glow: dictionary.glow || "发光",
+    spark: dictionary.spark || "闪光",
+    ribbon: dictionary.ribbon || "飘带",
+    left: dictionary.left || "左",
+    right: dictionary.right || "右",
+    top: dictionary.top || "上",
+    bottom: dictionary.bottom || "下",
+    center: dictionary.center || "中",
+    front: dictionary.front || "前",
+    back: dictionary.back || "后",
+    corner: dictionary.corner || "角",
+    red: dictionary.red || "红色",
+    blue: dictionary.blue || "蓝色",
+    yellow: dictionary.yellow || "黄色",
+    green: dictionary.green || "绿色",
+    black: dictionary.black || "黑色",
+    white: dictionary.white || "白色",
+    gold: dictionary.gold || "金色",
+    purple: dictionary.purple || "紫色",
     normal: dictionary.normal || "常态",
     hover: dictionary.hover || "悬浮",
+    pressed: dictionary.pressed || "按下态",
+    selected: dictionary.selected || "选中态",
+    unselected: dictionary.unselected || "未选中",
+    lock: dictionary.lock || "锁定",
+    unlock: dictionary.unlock || "解锁",
     active: dictionary.active || "选中",
     disabled: dictionary.disabled || "禁用",
   };
@@ -2631,7 +2680,32 @@ function upsertScheme(nextRules, shouldSave = true) {
 function normalizeLoadedRules(nextRules) {
   const merged = { ...defaultRules, ...nextRules };
   merged.filenameRules = mergeRuleText(defaultRules.filenameRules, merged.filenameRules);
+  merged.filenameRules = enforceNamingRuleAliases(merged.filenameRules);
   return merged;
+}
+
+function enforceNamingRuleAliases(ruleText) {
+  const overrides = {
+    background: "BG",
+    reward: "Rewards",
+    rewards: "Rewards",
+    gloryreward: "GloryRewards",
+    gloryrewards: "GloryRewards",
+    "底": "BG",
+    "背景图": "BG",
+  };
+  return String(ruleText || "")
+    .split("\n")
+    .map((line) => {
+      const parts = line.split("=");
+      const keyword = parts[0]?.trim();
+      if (!keyword) return "";
+      const key = keyword.toLowerCase();
+      const value = overrides[key] || overrides[keyword] || parts.slice(1).join("=").trim() || keyword;
+      return keyword + "=" + value;
+    })
+    .filter(Boolean)
+    .join("\n");
 }
 
 function mergeRuleText(defaultText, savedText) {
