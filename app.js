@@ -161,6 +161,7 @@ const els = {
   openaiModel: document.querySelector("#openaiModel"),
   aiProviderNote: document.querySelector("#aiProviderNote"),
   saveAiSettings: document.querySelector("#saveAiSettings"),
+  useTempAiSettings: document.querySelector("#useTempAiSettings"),
   testAiSettings: document.querySelector("#testAiSettings"),
   exportSchemeTemplate: document.querySelector("#exportSchemeTemplate"),
   importSchemeTemplate: document.querySelector("#importSchemeTemplate"),
@@ -323,6 +324,8 @@ function bindRules() {
     saveAiSettings(aiSettings);
     showToast("AI 配置已保存");
   });
+
+  els.useTempAiSettings.addEventListener("click", useTempAiSettings);
 
   els.testAiSettings.addEventListener("click", testAiSettings);
 
@@ -710,6 +713,18 @@ function applyProviderPreset() {
     els.openaiModel.value = "moonshot-v1-8k-vision-preview";
     els.aiProviderNote.value = "Kimi / Moonshot 视觉模型";
   }
+}
+
+function useTempAiSettings() {
+  const localConfig = normalizeAiSettings(readLocalAiConfig());
+  if (!localConfig.apiKey) {
+    showToast("未找到临时测试 API，请先配置 local-config.js");
+    return;
+  }
+  aiSettings = localConfig;
+  fillAiSettings();
+  saveAiSettings(aiSettings);
+  showToast("已使用临时测试 API 配置");
 }
 
 async function testAiSettings() {
