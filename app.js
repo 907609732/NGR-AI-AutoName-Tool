@@ -4,6 +4,7 @@ const PROJECTS_KEY = "ngr-ai-autoname-projects";
 const ACTIVE_PROJECT_KEY = "ngr-ai-autoname-active-project";
 const AI_SETTINGS_KEY = "ngr-ai-autoname-ai-settings";
 const IMAGE_TYPES = ["image/png", "image/jpeg", "image/webp", "image/gif", "image/svg+xml"];
+const NGR_TRAINING_VERSION = 1;
 
 const defaultRules = {
   schemeName: "默认方案",
@@ -40,6 +41,57 @@ const builtinSchemes = [
     contextDocs: "占位项目配置。后续可以复制或修改为新的项目命名规范。",
   },
 ];
+
+const ngrTrainingKnowledge = {
+  pageTerms: [
+    "SkillPanel", "Mall", "RPVPArena", "Keyboard", "Reward", "Toast", "PVPBRMap", "MainHUD", "ActivityChessMiniGame", "Homestead",
+    "Plateau", "NewBattle", "Lottery", "MainHUDStatic", "PVPTeam", "Setting", "MallS1", "Team", "MissionHandbook", "Intimacy",
+    "PVPMidBattle", "SocialChat", "ActivityVegetableXiaoXiaoLe", "PVPBattleCommon", "QuestGuide", "SceneryRecord", "BattlePass", "PVPBR",
+    "FengyunFestival", "CreationBox", "ActivitySanrio", "GuanDan", "S1SeasonInterface", "ActivityHonorOfKingsLinkage", "RPVPTourArena",
+    "Indicator", "RPVPArenaBroadcast", "MissionCalendar", "Gamepad", "VegetableFairySkateboard", "PVPBRSystemBroadcast", "RoleViewing",
+    "ImageJumpping", "UserLogin", "Personalization", "Appearance", "TopLog", "Weapon", "Cultivate", "MainRole", "Map", "MusicFestival",
+    "RPVPArenaLoading", "RPVPArenaMatch", "Identification", "RPVPPick", "Fishing", "RPVPRankReview", "PVPBRHall", "Battle", "Schools",
+    "PVPBag", "RPVPArenaOver", "Skill", "HeroicChronicles", "PVPLobby", "PVPLogin", "NewbieTask", "CreateRole", "ActivityRoleLiBai",
+    "Credit", "AchievementCenter", "RPVPWristSeal", "SocialBadge", "BackFlow", "Decompose", "SailNote", "ActivityTips", "DailyCheckIn",
+    "ClimbingFestival", "Illustration", "RPVPArenaPrep", "BlindBox", "WristSealSkills", "PVPBRSkillPanel", "MainHUDMenu", "Achievement",
+    "PVPBRTopLog", "EquipmentMake", "ActivityCharacterChallenge", "ItemNotice"
+  ].join("\n"),
+  componentTerms: [
+    "BG", "Bg", "Button", "Btn", "Icon", "Banner", "Nav", "Module", "Line", "Bar", "ProgressBar", "Frame", "Mask", "Light",
+    "Pattern", "Tab", "Card", "Item", "Panel", "Container", "Arrow", "Sprite", "Title", "Text", "Txt", "Number", "Num", "Point",
+    "Circle", "Bubble", "Logo", "Tag", "Lock", "Unlock", "Popup", "Toast", "Broadcast", "Recommend", "Reward", "GloryReward", "Guide",
+    "GuideKey", "Key", "Map", "Skill", "SkillBg", "HeadBg", "TitleBg", "MainBg", "IconBg", "AvatarMask", "Progress", "Quality",
+    "Settlement", "Ranking", "Challenge", "InvitationNotice", "Airdrop", "ShadowTrial", "Resonance", "DailyFreeGiftPack", "NPC", "Gold",
+    "Switch", "UpGrade", "Vegetable", "Badge", "Loading", "PlayerPet", "Task", "Game", "Inscription", "Level", "Box", "Shadow", "Arena",
+    "Wheel", "RankReward", "MonthyCard", "Direction", "Pagoda", "DeathEffect", "Empty", "Dispatch", "Party", "Tips", "Middle", "Role",
+    "Dungeon"
+  ].join("\n"),
+  stateTerms: [
+    "Normal", "Nml", "Hover", "Active", "Selected", "Select", "Sel", "Unselected", "UnSel", "Disabled", "Forbidden", "Lock", "Unlock",
+    "Pressed", "Down", "Up", "Open", "Close", "Check", "Pick", "Ban", "Activate", "Default", "Focus", "On", "Off", "Red", "Blue",
+    "Yellow", "Black", "White", "Left", "Right", "Top", "Bottom", "Small", "Big"
+  ].join("\n"),
+  filenameRules: [
+    "Icon=Icon", "Bg=BG", "BG=BG", "bg=BG", "Btn=Button", "button=Button", "Line=Line", "Divider=Line", "Bar=Bar",
+    "Progress=Progress", "ProgressBar=ProgressBar", "Light=Light", "Mask=Mask", "Frame=Frame", "Pattern=Pattern", "Tab=Tab",
+    "Card=Card", "Container=Container", "Arrow=Arrow", "Sprite=Sprite", "Title=Title", "Txt=Text", "Text=Text", "Num=Number",
+    "Sel=Selected", "Select=Selected", "Selected=Selected", "UnSel=Unselected", "Nml=Normal", "Normal=Normal", "Hover=Hover",
+    "Active=Active", "Disabled=Disabled", "Forbidden=Forbidden", "PressedDwon=PressedDown", "PressedDown=PressedDown", "Check=Check",
+    "Pick=Pick", "Ban=Ban", "Lock=Lock", "Unlock=Unlock", "Popup=Popup", "Toast=Toast", "Broadcast=Broadcast", "Recommend=Recommend",
+    "Reward=Reward", "GuideKey=GuideKey", "TitleBg=Title_BG", "MainBg=Main_BG", "IconBg=Icon_BG", "Mall=Mall", "BattlePass=BattlePass",
+    "Bp=BattlePass", "AMatch=ArenaMatch", "RPVPPick=RPVPPick", "RPVPArena=RPVPArena", "PVPBR=PVPBR", "MainHUD=MainHUD",
+    "Homestead=Homestead", "MissionHandbook=MissionHandbook", "SceneryRecord=SceneryRecord", "HeroicChronicles=HeroicChronicles",
+    "ActivityHOKCollab=ActivityHonorOfKingsLinkage", "VX=VFX"
+  ].join("\n"),
+  contextDocs: [
+    "NGR 历史切图训练数据：来自 /Users/chenyuecai/Downloads/Modules，共分析 11727 张历史切图文件。",
+    "常见命名结构：T_UI_Img_模块_语义_状态、T_UI_Icon_模块_动作、T_UI_Bg_模块_用途。保留 T_UI 作为固定前缀，Img/Icon/Bg/Btn/Line/Mask/Frame/Light/Tab 等词可直接作为组件语义。",
+    "高频模块词：Mall、SkillPanel、RPVPArena、Keyboard、Reward、Toast、PVPBRMap、MainHUD、Homestead、BattlePass、MissionHandbook、SocialChat、SceneryRecord、RPVPPick。",
+    "图片尺寸规律：64x64、128x128、256x256、512x512 多为 Icon/Badge；宽高比大于 3 且高度较小多为 Line/Bar/Progress；3440x1440、2048x1024、1024x512 等大图优先视为 BG/MainBg/PanelBg；方形大图常见 Mask、Frame、Badge、AvatarMask。",
+    "状态词习惯：Normal/Nml 表示常态，Sel/Select/Selected 表示选中，UnSel 表示未选，Disabled/Forbidden 表示禁用，Check/Pick/Ban/Lock/Unlock 可作为状态或行为后缀。",
+    "颜色/方向可作为末尾限定词保留：Red、Blue、Yellow、Black、White、Left、Right、Top、Bottom、Big、Small。"
+  ].join("\n")
+};
 
 const builtinTranslations = {
   首页: "Home",
@@ -1041,15 +1093,24 @@ function makeRecommendations(asset) {
 function inferKind(asset, source, tags, componentTerms = []) {
   const lower = source.toLowerCase();
   const translated = translateTextByDictionary(source).toLowerCase();
+  const { width, height } = asset.dimensions;
   if (/bg|background|背景/.test(lower)) return pickTerm(componentTerms, "BG", pickTag(tags, "BG", "背景"));
   if (/btn|button|按钮/.test(lower)) return pickTerm(componentTerms, "Button", pickTag(tags, "Button", "按钮"));
   if (/icon|ico|图标/.test(lower)) return pickTerm(componentTerms, "Icon", pickTag(tags, "Icon", "图标"));
+  if (/line|divider|edgeline|线/.test(lower)) return pickTerm(componentTerms, "Line", "Line");
+  if (/bar|progress|进度/.test(lower)) return pickTerm(componentTerms, "ProgressBar", "Bar");
+  if (/mask|遮罩/.test(lower)) return pickTerm(componentTerms, "Mask", "Mask");
+  if (/frame|border|边框/.test(lower)) return pickTerm(componentTerms, "Frame", "Frame");
+  if (/light|glow|光/.test(lower)) return pickTerm(componentTerms, "Light", "Light");
+  if (/card|卡片/.test(lower)) return pickTerm(componentTerms, "Card", "Card");
+  if (/tab/.test(lower)) return pickTerm(componentTerms, "Tab", "Tab");
   if (/logo/.test(lower)) return pickTerm(componentTerms, "Logo", "Logo");
   if (/banner|横幅/.test(lower)) return pickTerm(componentTerms, "Banner", "Banner");
   if (/tab|nav|导航/.test(lower)) return pickTerm(componentTerms, "Nav", "Nav");
   if (/button/.test(translated)) return pickTerm(componentTerms, "Button", pickTag(tags, "Button", "Button"));
   if (/icon/.test(translated)) return pickTerm(componentTerms, "Icon", pickTag(tags, "Icon", "Icon"));
-  const { width, height } = asset.dimensions;
+  if (width && height && width > height * 3 && height <= 160) return pickTerm(componentTerms, "Line", "Line");
+  if (width && height && height > width * 3 && width <= 160) return pickTerm(componentTerms, "Line", "Line");
   if (width && height && width > height * 2.6) return pickTerm(componentTerms, "Banner", "Banner");
   if (width && height && Math.abs(width - height) < 8 && width <= 160) return pickTerm(componentTerms, "Icon", pickTag(tags, "Icon", "图标"));
   if (width && height && width >= 600 && height >= 300) return pickTerm(componentTerms, "BG", pickTag(tags, "BG", "背景"));
@@ -1069,7 +1130,7 @@ function inferPage(source, pageTerms = []) {
 
 function inferState(source, stateTerms = []) {
   const lower = source.toLowerCase();
-  const matched = matchTerm(source, stateTerms);
+  const matched = matchTokenTerm(source, stateTerms);
   if (matched) return matched;
   if (/hover|悬浮/.test(lower)) return pickTerm(stateTerms, "Hover", "Hover");
   if (/active|selected|pressed|选中|点击/.test(lower)) return pickTerm(stateTerms, "Active", "Active");
@@ -1091,6 +1152,26 @@ function matchTerm(source, terms) {
   return terms.find((term) => lower.includes(term.toLowerCase())) || "";
 }
 
+function matchTokenTerm(source, terms) {
+  const tokens = getSourceTokens(source);
+  return terms.find((term) => tokens.includes(term.toLowerCase())) || "";
+}
+
+function keywordMatchesSource(keyword, source, lowerSource = source.toLowerCase()) {
+  const cleanKeyword = String(keyword || "").trim();
+  if (!cleanKeyword) return false;
+  if (/^[A-Za-z0-9]+$/.test(cleanKeyword)) return getSourceTokens(source).includes(cleanKeyword.toLowerCase());
+  return lowerSource.includes(cleanKeyword.toLowerCase());
+}
+
+function getSourceTokens(source) {
+  return source
+    .replace(/([a-z])([A-Z])/g, "$1_$2")
+    .split(/_+/)
+    .map((token) => token.toLowerCase())
+    .filter(Boolean);
+}
+
 function parseKnowledge() {
   return {
     pageTerms: parseList(rules.pageTerms),
@@ -1107,7 +1188,7 @@ function inferMappedTerms(source, knowledge) {
   let component = "";
   let state = "";
   knowledge.filenameRules.forEach((rule) => {
-    if (!lower.includes(rule.keyword.toLowerCase())) return;
+    if (!keywordMatchesSource(rule.keyword, source, lower)) return;
     const translatedValue = translateRuleValue(rule.value);
     direct.push(translatedValue);
     if (!page && knowledge.pageTerms.some((term) => sameTerm(term, translatedValue) || sameTerm(term, rule.value))) page = translatedValue;
@@ -1121,7 +1202,7 @@ function translateFilename(source, knowledge) {
   const mappedValues = [];
   const lower = source.toLowerCase();
   knowledge.filenameRules.forEach((rule) => {
-    if (lower.includes(rule.keyword.toLowerCase())) mappedValues.push(translateRuleValue(rule.value, knowledge));
+    if (keywordMatchesSource(rule.keyword, source, lower)) mappedValues.push(translateRuleValue(rule.value, knowledge));
   });
   if (mappedValues.length) return compactParts([...new Set(mappedValues)]);
   return translateTextByDictionary(source)
@@ -1185,6 +1266,8 @@ function sameTerm(a, b) {
 
 function normalizeSourceName(name) {
   return name
+    .replace(/^T_UI_(Img|Icon|Bg|Btn)?_?/i, "")
+    .replace(/^T_(Img|Icon|Bg|Btn)_?/i, "")
     .replace(/^(@\d+x|icon-|img-|image-|切图_|切图-)/i, "")
     .replace(/[\s-]+/g, "_")
     .replace(/_{2,}/g, "_")
@@ -1712,14 +1795,82 @@ function normalizeProjects(nextProjects) {
     .map((project, index) => {
       const schemesForProject = normalizeProjectSchemes(project.name, (project.schemes || []).map((scheme) => normalizeLoadedRules(scheme)));
       const activeSchemeName = schemesForProject.some((scheme) => scheme.schemeName === project.activeSchemeName) ? project.activeSchemeName : schemesForProject[0].schemeName;
-      return {
+      return enrichProjectWithTraining({
         id: project.id || "project-" + index + "-" + Date.now(),
         name: project.name || "未命名项目",
         description: project.description || "",
         activeSchemeName,
+        trainingVersion: project.trainingVersion || 0,
         schemes: schemesForProject,
-      };
+      });
     });
+}
+
+function enrichProjectWithTraining(project) {
+  if (!isNgrProject(project) || project.trainingVersion >= NGR_TRAINING_VERSION) return project;
+  return {
+    ...project,
+    trainingVersion: NGR_TRAINING_VERSION,
+    schemes: project.schemes.map(enrichSchemeWithNgrTraining),
+  };
+}
+
+function isNgrProject(project) {
+  return project.id === "ngr" || /NGR/i.test(project.name || "");
+}
+
+function enrichSchemeWithNgrTraining(scheme) {
+  return normalizeLoadedRules({
+    ...scheme,
+    tags: mergeListText(scheme.tags, "Line, Bar, ProgressBar, Frame, Mask, Light, Pattern, Tab, Card, Selected, Forbidden, Lock, Unlock"),
+    pageTerms: mergeLineText(scheme.pageTerms, ngrTrainingKnowledge.pageTerms),
+    componentTerms: mergeLineText(scheme.componentTerms, ngrTrainingKnowledge.componentTerms),
+    stateTerms: mergeLineText(scheme.stateTerms, ngrTrainingKnowledge.stateTerms),
+    filenameRules: mergeRuleText(scheme.filenameRules, ngrTrainingKnowledge.filenameRules),
+    contextDocs: mergeContextText(scheme.contextDocs, ngrTrainingKnowledge.contextDocs),
+  });
+}
+
+function mergeLineText(currentText, incomingText) {
+  const lines = [];
+  const seen = new Set();
+  String(currentText || "")
+    .split(/\n/)
+    .concat(String(incomingText || "").split(/\n/))
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .forEach((line) => {
+      const key = line.toLowerCase();
+      if (seen.has(key)) return;
+      seen.add(key);
+      lines.push(line);
+    });
+  return lines.join("\n");
+}
+
+function mergeListText(currentText, incomingText) {
+  const items = [];
+  const seen = new Set();
+  String(currentText || "")
+    .split(/[\n,，、]/)
+    .concat(String(incomingText || "").split(/[\n,，、]/))
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .forEach((item) => {
+      const key = item.toLowerCase();
+      if (seen.has(key)) return;
+      seen.add(key);
+      items.push(item);
+    });
+  return items.join(", ");
+}
+
+function mergeContextText(currentText, incomingText) {
+  const current = String(currentText || "").trim();
+  const incoming = String(incomingText || "").trim();
+  if (!current) return incoming;
+  if (current.includes("NGR 历史切图训练数据")) return current;
+  return current + "\n\n" + incoming;
 }
 
 function normalizeProjectSchemes(projectName, nextSchemes) {
