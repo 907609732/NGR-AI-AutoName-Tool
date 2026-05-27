@@ -6,6 +6,7 @@ const AI_SETTINGS_KEY = "ngr-ai-autoname-ai-settings";
 const DETECTION_PROFILES_KEY = "ngr-ai-autoname-detection-profiles";
 const ACTIVE_DETECTION_PROFILE_KEY = "ngr-ai-autoname-active-detection-profile";
 const LIST_DISPLAY_MODE_KEY = "ngr-ai-autoname-list-display-mode";
+const LIST_SORT_MODE_KEY = "ngr-ai-autoname-list-sort-mode";
 const IMAGE_TYPES = ["image/png", "image/jpeg", "image/webp", "image/gif", "image/svg+xml"];
 const NGR_TRAINING_VERSION = 6;
 const YYSLS_TRAINING_VERSION = 1;
@@ -237,6 +238,7 @@ let showDetectionProblemOnly = false;
 let toastTimer = null;
 let activeLexiconCategory = "状态";
 let listDisplayMode = loadListDisplayMode();
+let listSortMode = loadListSortMode();
 
 const els = {
   backButton: document.querySelector("#backButton"),
@@ -301,6 +303,7 @@ const els = {
   exportFiles: document.querySelector("#exportFiles"),
   batchSuffix: document.querySelector("#batchSuffix"),
   listDisplayMode: document.querySelector("#listDisplayMode"),
+  listSortMode: document.querySelector("#listSortMode"),
   applySuffix: document.querySelector("#applySuffix"),
   problemFilter: document.querySelector("#problemFilter"),
   removeSelected: document.querySelector("#removeSelected"),
@@ -346,6 +349,7 @@ function init() {
   bindTranslator();
   protectEditableShortcuts();
   fillListDisplayMode();
+  fillListSortMode();
   fillRulesForm();
   fillDetectionProfileForm();
   fillAiSettings();
@@ -772,6 +776,11 @@ function bindEditor() {
   els.listDisplayMode.addEventListener("change", () => {
     listDisplayMode = els.listDisplayMode.value === "compact" ? "compact" : "full";
     localStorage.setItem(LIST_DISPLAY_MODE_KEY, listDisplayMode);
+    renderAssetList();
+  });
+  els.listSortMode.addEventListener("change", () => {
+    listSortMode = normalizeListSortMode(els.listSortMode.value);
+    localStorage.setItem(LIST_SORT_MODE_KEY, listSortMode);
     renderAssetList();
   });
 }
@@ -1318,7 +1327,7 @@ function renderAssetList() {
     els.assetList.textContent = "请先上传切图文件夹";
     return;
   }
-  const visibleAssets = showProblemOnly ? assets.filter((asset) => asset.dimensionIssue) : assets;
+  const visibleAssets = getVisibleAssets();
   if (!visibleAssets.length) {
     els.assetList.className = "asset-list-body empty-state";
     els.assetList.textContent = "当前没有分辨率问题图片";
@@ -1509,6 +1518,29 @@ function fillListDisplayMode() {
 
 function loadListDisplayMode() {
   return localStorage.getItem(LIST_DISPLAY_MODE_KEY) === "compact" ? "compact" : "full";
+}
+
+function fillListSortMode() {
+  els.listSortMode.value = listSortMode;
+}
+
+function loadListSortMode() {
+  return normalizeListSortMode(localStorage.getItem(LIST_SORT_MODE_KEY));
+}
+
+function normalizeListSortMode(mode) {
+  return ["upload", "name-asc", "name-desc"].includes(mode) ? mode : "upload";
+}
+
+function getVisibleAssets() {
+  const visibleAssets = showProblemOnly ? assets.filter((asset) => asset.dimensionIssue) : [...assets];
+  if (listSortMode === "upload") return visibleAssets;
+  return [...visibleAssets].sort((left, right) => {
+    const leftName = (left.originalBase + left.extension).trim();
+    const rightName = (right.originalBase + right.extension).trim();
+    const result = leftName.localeCompare(rightName, "zh-Hans-CN", { numeric: true, sensitivity: "base" });
+    return listSortMode === "name-desc" ? -result : result;
+  });
 }
 
 function renderDetectionList() {

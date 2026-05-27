@@ -816,7 +816,7 @@ button:disabled {
 
 .batch-tools {
   display: grid;
-  grid-template-columns: minmax(0, 240px) minmax(0, 240px) minmax(0, 180px) auto auto auto;
+  grid-template-columns: minmax(0, 220px) minmax(0, 220px) minmax(0, 160px) minmax(0, 160px) auto auto auto;
   gap: 10px;
   align-items: end;
   padding-top: 18px;
