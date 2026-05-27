@@ -9,9 +9,11 @@
 
 ## **使用教程**
 ### **配置说明**
+先点击这里进行下载  
+<img width="2940" height="1682" alt="image" src="https://github.com/user-attachments/assets/e9f4599f-0a51-4ccf-bf89-4334db507684" />
 
-
-下载后解压打开index.html文件
+下载后解压打开index.html文件，即可访问项目网站
+<img width="1602" height="894" alt="c38388932b93f07be43dc6b1526235cd" src="https://github.com/user-attachments/assets/3463ec02-e522-4034-8643-bd3984239ef2" />
 
 下载后第一次先在设置里面配置API，然后点测试API，成功后即可使用
 <img width="2882" height="838" alt="image" src="https://github.com/user-attachments/assets/66121a42-d832-4788-b374-2badfb26e4e1" />
