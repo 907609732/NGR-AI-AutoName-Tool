@@ -1042,6 +1042,65 @@ button:disabled {
   gap: 8px;
 }
 
+.inline-lexicon {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-2);
+}
+
+.inline-lexicon summary {
+  cursor: pointer;
+  padding: 9px 10px;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 750;
+  user-select: none;
+}
+
+.lexicon-content {
+  display: grid;
+  gap: 10px;
+  padding: 0 10px 10px;
+}
+
+.lexicon-group {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr);
+  gap: 8px;
+  align-items: start;
+}
+
+.lexicon-group > span {
+  padding-top: 5px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 750;
+  white-space: nowrap;
+}
+
+.lexicon-chips {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.lexicon-chip {
+  min-height: 28px;
+  padding: 0 9px;
+  border: 1px solid #b8c8ce;
+  border-radius: 999px;
+  background: #fff;
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.lexicon-chip:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+  background: #f6fbfb;
+}
+
 .recommendations.compact {
   margin-top: 0;
   gap: 8px;
@@ -1156,7 +1215,8 @@ button:disabled {
   .asset-item,
   .inline-name-row,
   .inline-prefix,
-  .inline-final-name {
+  .inline-final-name,
+  .lexicon-group {
     grid-template-columns: 1fr;
   }
 

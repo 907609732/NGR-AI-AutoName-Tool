@@ -8,6 +8,14 @@ const ACTIVE_DETECTION_PROFILE_KEY = "ngr-ai-autoname-active-detection-profile";
 const IMAGE_TYPES = ["image/png", "image/jpeg", "image/webp", "image/gif", "image/svg+xml"];
 const NGR_TRAINING_VERSION = 4;
 const FORBIDDEN_NAMING_TERMS = ["module", "modules"];
+const lexiconCategories = [
+  { title: "状态", terms: ["Normal", "Hover", "Pressed", "Disabled", "Selected", "Unselected", "Active", "Lock", "Unlock"] },
+  { title: "类型", terms: ["BG", "Button", "Icon", "Line", "Frame", "Mask", "Card", "Tab", "Panel", "Item"] },
+  { title: "装饰", terms: ["Light", "Shadow", "Pattern", "Ornament", "Deco", "Glow", "Spark", "Ribbon"] },
+  { title: "内容", terms: ["Illustration", "Character", "Weapon", "Reward", "Gift", "Badge", "Logo", "Avatar"] },
+  { title: "方向", terms: ["Left", "Right", "Top", "Bottom", "Center", "Front", "Back", "Corner"] },
+  { title: "颜色", terms: ["Red", "Blue", "Yellow", "Green", "Black", "White", "Gold", "Purple"] },
+];
 
 const defaultRules = {
   schemeName: "默认方案",
@@ -1292,7 +1300,7 @@ function renderAssetList() {
       meaningText.textContent = "中文含义：" + explainEnglishName(name);
       button.append(nameText, meaningText);
       button.addEventListener("click", () => {
-        asset.finalBaseName = name;
+        asset.finalBaseName = cleanNamingName(name);
         renderAssetList();
         showToast("已填入推荐名称");
       });
@@ -1321,8 +1329,40 @@ function renderAssetList() {
     finalField.append(finalInput, finalMeaning);
     finalLabel.append(finalText, finalField);
 
+    const lexiconWrap = document.createElement("details");
+    lexiconWrap.className = "inline-lexicon";
+    const lexiconSummary = document.createElement("summary");
+    lexiconSummary.textContent = "词库";
+    const lexiconContent = document.createElement("div");
+    lexiconContent.className = "lexicon-content";
+    buildLexiconCategories().forEach((category) => {
+      const group = document.createElement("div");
+      group.className = "lexicon-group";
+      const title = document.createElement("span");
+      title.textContent = category.title;
+      const chips = document.createElement("div");
+      chips.className = "lexicon-chips";
+      category.terms.forEach((term) => {
+        const chip = document.createElement("button");
+        chip.type = "button";
+        chip.className = "lexicon-chip";
+        chip.textContent = term;
+        chip.title = explainEnglishName(term);
+        chip.addEventListener("click", () => {
+          asset.finalBaseName = appendLexiconTerm(asset.finalBaseName, term);
+          finalInput.value = asset.finalBaseName;
+          afterName.querySelector("strong").textContent = asset.finalBaseName ? buildExportName(asset) : "待命名";
+          finalMeaning.textContent = "中文含义：" + explainEnglishName(asset.finalBaseName);
+        });
+        chips.appendChild(chip);
+      });
+      group.append(title, chips);
+      lexiconContent.appendChild(group);
+    });
+    lexiconWrap.append(lexiconSummary, lexiconContent);
+
     nameRow.append(prefix, finalLabel);
-    editor.append(nameRow, recommendationWrap);
+    editor.append(nameRow, recommendationWrap, lexiconWrap);
     row.append(checkbox, img, text, editor);
     els.assetList.appendChild(row);
   });
@@ -1427,6 +1467,42 @@ function makeRecommendations(asset) {
     ...mapped.direct,
   ];
   return [...new Set(candidates.map(removeProjectTermsFromName).map(cleanNamingName).filter(Boolean))].slice(0, 5);
+}
+
+function buildLexiconCategories() {
+  const knowledge = parseKnowledge();
+  const dynamicCategories = [
+    { title: "当前组件词库", terms: knowledge.componentTerms },
+    { title: "当前状态词库", terms: knowledge.stateTerms },
+  ];
+  return [...lexiconCategories, ...dynamicCategories]
+    .map((category) => ({
+      title: category.title,
+      terms: uniqueCleanTerms(category.terms).slice(0, 32),
+    }))
+    .filter((category) => category.terms.length);
+}
+
+function uniqueCleanTerms(terms) {
+  const seen = new Set();
+  const result = [];
+  (Array.isArray(terms) ? terms : parseList(terms)).forEach((term) => {
+    const clean = cleanNamingName(term);
+    if (!clean) return;
+    const key = clean.toLowerCase();
+    if (seen.has(key)) return;
+    seen.add(key);
+    result.push(clean);
+  });
+  return result;
+}
+
+function appendLexiconTerm(currentName, term) {
+  const cleanTerm = cleanNamingName(term);
+  if (!cleanTerm) return cleanNamingName(currentName);
+  const parts = cleanNamingName(currentName).split(/_+/).filter(Boolean);
+  if (parts.some((part) => part.toLowerCase() === cleanTerm.toLowerCase())) return parts.join("_");
+  return [...parts, cleanTerm].join("_");
 }
 
 function inferKind(asset, source, tags, componentTerms = []) {
