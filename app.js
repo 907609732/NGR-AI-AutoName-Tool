@@ -1819,13 +1819,57 @@ function explainEnglishName(name) {
   const clean = sanitizeName(name);
   if (!clean) return "待填写";
   const dictionary = buildChineseMeaningDictionary();
+  const phraseDictionary = buildChinesePhraseDictionary();
   const words = clean
     .replace(/([a-z])([A-Z])/g, "$1_$2")
     .split(/_+/)
     .map((word) => word.trim())
     .filter(Boolean);
-  const meanings = words.map((word) => dictionary[word.toLowerCase()] || word);
+  const fullPhrase = phraseDictionary[words.join("_").toLowerCase()];
+  if (fullPhrase) return fullPhrase;
+  const meanings = [];
+  for (let index = 0; index < words.length; index += 1) {
+    let matched = "";
+    let matchedLength = 0;
+    for (let length = Math.min(4, words.length - index); length > 1; length -= 1) {
+      const key = words.slice(index, index + length).join("_").toLowerCase();
+      if (phraseDictionary[key]) {
+        matched = phraseDictionary[key];
+        matchedLength = length;
+        break;
+      }
+    }
+    if (matched) {
+      meanings.push(matched);
+      index += matchedLength - 1;
+    } else {
+      const word = words[index];
+      meanings.push(dictionary[word.toLowerCase()] || word);
+    }
+  }
   return meanings.join(" / ");
+}
+
+function buildChinesePhraseDictionary() {
+  return {
+    home_scene_bg: "主页场景底图",
+    home_shop_bg: "主页商店底图",
+    home_forest_bg: "主页森林底图",
+    home_market_bg: "主页市场底图",
+    business_record_page_mask: "营业记录页遮罩",
+    business_record_page: "营业记录页",
+    record_page_mask: "记录页遮罩",
+    page_mask_bottom: "页面底部遮罩",
+    control_overlay: "控件覆盖层",
+    overlay_mask: "覆盖层遮罩",
+    travel_journal_title: "外出游历标题",
+    travel_journal: "外出游历",
+    adventure_note_banner: "冒险记录横幅",
+    journey_note_icon: "旅程记录图标",
+    white_chrysanthemum_icon: "白菊图标",
+    chrysanthemum_white_icon: "白菊图标",
+    flower_white_chrysanthemum_icon: "白色菊花图标",
+  };
 }
 
 function buildChineseMeaningDictionary() {
@@ -1845,6 +1889,23 @@ function buildChineseMeaningDictionary() {
     line: dictionary.line || "线条",
     frame: dictionary.frame || "边框",
     mask: dictionary.mask || "遮罩",
+    scene: dictionary.scene || "场景",
+    business: dictionary.business || "营业",
+    record: dictionary.record || "记录",
+    page: dictionary.page || "页面",
+    control: dictionary.control || "控件",
+    overlay: dictionary.overlay || "覆盖层",
+    travel: dictionary.travel || "旅行",
+    journal: dictionary.journal || "日志",
+    title: dictionary.title || "标题",
+    shop: dictionary.shop || "商店",
+    forest: dictionary.forest || "森林",
+    market: dictionary.market || "市场",
+    adventure: dictionary.adventure || "冒险",
+    note: dictionary.note || "记录",
+    journey: dictionary.journey || "旅程",
+    flower: dictionary.flower || "花",
+    chrysanthemum: dictionary.chrysanthemum || "菊花",
     card: dictionary.card || "卡片",
     tab: dictionary.tab || "标签",
     panel: dictionary.panel || "面板",
