@@ -7,6 +7,7 @@ const DETECTION_PROFILES_KEY = "ngr-ai-autoname-detection-profiles";
 const ACTIVE_DETECTION_PROFILE_KEY = "ngr-ai-autoname-active-detection-profile";
 const IMAGE_TYPES = ["image/png", "image/jpeg", "image/webp", "image/gif", "image/svg+xml"];
 const NGR_TRAINING_VERSION = 5;
+const YYSLS_TRAINING_VERSION = 1;
 const FORBIDDEN_NAMING_TERMS = ["module", "modules"];
 const lexiconCategories = [
   { title: "状态", terms: ["Normal", "Hover", "Pressed", "Disabled", "Selected", "Unselected", "Active", "Lock", "Unlock"] },
@@ -30,6 +31,41 @@ const defaultRules = {
   contextDocs: "",
 };
 
+const yyslsTrainingKnowledge = {
+  tags: "bg, btn, icon, line, frame, mask, tab, sel, nml, hover, ban, pinyin, lower_case",
+  pageTerms: [
+    "login", "loading", "face", "career", "huijuan", "task", "home", "mainpage", "nielian", "yuxue", "shequ", "yulan",
+    "kaifeng", "qiyu", "fenzhi", "coures", "courses", "dialoge", "bm", "vx", "com"
+  ].join("\n"),
+  componentTerms: [
+    "bg", "btn", "icon", "line", "frame", "mask", "tab", "item", "title", "pop", "bar", "pro", "slider", "floor",
+    "pic", "head", "body", "circle", "light", "shadow", "glow", "dian", "diban", "diwen", "huawen", "zhuangshi",
+    "jianbian", "tishi", "erweima", "lunpan", "jindu", "guide", "name", "photo", "share", "voice", "play", "pause"
+  ].join("\n"),
+  stateTerms: [
+    "nml", "sel", "hover", "ban", "focus", "dark", "light", "unlock", "x", "z", "l", "d", "left", "right", "zuo", "you"
+  ].join("\n"),
+  filenameRules: [
+    "常态=nml", "默认=nml", "普通=nml", "选中=sel", "选择=sel", "悬浮=hover", "禁用=ban", "不可用=ban", "焦点=focus",
+    "按钮=btn", "背景=bg", "底图=bg", "底=bg", "图标=icon", "线=line", "线条=line", "边框=frame", "遮罩=mask", "标签=tab",
+    "渐变=jianbian", "花纹=huawen", "装饰=zhuangshi", "底板=diban", "地板=diban", "底纹=diwen", "二维码=erweima",
+    "转盘=lunpan", "进度=jindu", "提示=tishi", "预览=yulan", "社区=shequ", "捏脸=nielian", "选择=xuanze", "引导=guide",
+    "左边=zuobian", "右边=youbian", "左=left", "右=right", "黑=dark", "白=light", "亮=light", "暗=dark",
+    "bg=bg", "BG=bg", "btn=btn", "Btn=btn", "button=btn", "Button=btn", "icon=icon", "Icon=icon", "line=line", "Line=line",
+    "frame=frame", "Frame=frame", "mask=mask", "Mask=mask", "normal=nml", "Normal=nml", "nml=nml", "NML=nml",
+    "select=sel", "selected=sel", "Selected=sel", "sel=sel", "hover=hover", "Hover=hover", "disabled=ban", "Disabled=ban",
+    "ban=ban", "focus=focus", "dark=dark", "light=light"
+  ].join("\n"),
+  contextDocs: [
+    "燕云十六声 / yysls 历史切图命名习惯：文件名几乎全部使用小写字母、数字和下划线，不使用 PascalCase。",
+    "命名结构通常为：页面或系统前缀_功能语义_组件类型_状态，例如 login_btn_nml、loading_secrecy_btn_sel、face_create_btn_right_bg_zhu_nml。",
+    "中英混合但以拼音为主：nielian、jianbian、huawen、zhuangshi、diban、erweima、xuanze、yulan、shequ、lunpan、zuobian、youbian 等可直接作为命名词。",
+    "英文多用短词或缩写：bg、btn、icon、line、frame、mask、tab、item、title、pop、bar、pro、slider、light、dark。",
+    "状态词固定倾向：nml=常态，sel=选中，hover=悬浮，ban=禁用，focus=焦点；不要生成 Normal、Selected、Disabled 这类长英文状态词。",
+    "最终名称必须保持全小写 snake_case，用下划线连接；如果中文原名包含拼音习惯词，优先保留拼音而不是翻译成长英文。"
+  ].join("\n")
+};
+
 const builtinSchemes = [
   {
     ...defaultRules,
@@ -41,9 +77,12 @@ const builtinSchemes = [
     ...defaultRules,
     schemeName: "yysls命名规范",
     projectName: "yysls",
-    tags: "BG, Button, Hover, Normal, Icon, Item, Pinyin",
-    filenameRules: defaultRules.filenameRules + "\n按钮=AnNiu\n背景=BeiJing\n图标=TuBiao\n首页=ShouYe\n登录=DengLu",
-    contextDocs: "该项目命名规范带中英混合，有拼音命名。遇到团队特殊词可保留拼音或中英混合表达。",
+    tags: yyslsTrainingKnowledge.tags,
+    pageTerms: yyslsTrainingKnowledge.pageTerms,
+    componentTerms: yyslsTrainingKnowledge.componentTerms,
+    stateTerms: yyslsTrainingKnowledge.stateTerms,
+    filenameRules: defaultRules.filenameRules + "\n" + yyslsTrainingKnowledge.filenameRules,
+    contextDocs: yyslsTrainingKnowledge.contextDocs,
   },
   {
     ...defaultRules,
@@ -992,7 +1031,7 @@ function parseAiNames(text) {
 
 function normalizeAiNames(names, fallback) {
   const normalized = names
-    .map((name) => cleanNamingName(name))
+    .map((name) => formatNamingName(name))
     .filter(Boolean)
     .filter((name) => /^[A-Za-z0-9_]+$/.test(name));
   return [...new Set(normalized)].slice(0, 5).length ? [...new Set(normalized)].slice(0, 5) : fallback;
@@ -1336,7 +1375,7 @@ function renderAssetList() {
       meaningText.textContent = "中文含义：" + explainEnglishName(name);
       button.append(nameText, meaningText);
       button.addEventListener("click", () => {
-        asset.finalBaseName = cleanNamingName(name);
+        asset.finalBaseName = formatNamingName(name);
         renderAssetList();
         showToast("已填入推荐名称");
       });
@@ -1358,7 +1397,7 @@ function renderAssetList() {
     finalMeaning.className = "name-meaning";
     finalMeaning.textContent = "中文含义：" + explainEnglishName(asset.finalBaseName);
     finalInput.addEventListener("input", () => {
-      asset.finalBaseName = cleanNamingName(finalInput.value);
+      asset.finalBaseName = formatNamingName(finalInput.value);
       afterName.querySelector("strong").textContent = asset.finalBaseName ? buildExportName(asset) : "待命名";
       finalMeaning.textContent = "中文含义：" + explainEnglishName(asset.finalBaseName);
     });
@@ -1522,7 +1561,7 @@ function makeRecommendations(asset) {
     compactParts([kind, pickTerm(knowledge.stateTerms, "Normal", tags.includes("Normal") ? "Normal" : "常态")]),
     ...mapped.direct,
   ];
-  return [...new Set(candidates.map(removeProjectTermsFromName).map(cleanNamingName).filter(Boolean))].slice(0, 5);
+  return [...new Set(candidates.map(removeProjectTermsFromName).map(formatNamingName).filter(Boolean))].slice(0, 5);
 }
 
 function buildLexiconCategories() {
@@ -1546,7 +1585,7 @@ function uniqueCleanTerms(terms) {
   const seen = new Set();
   const result = [];
   (Array.isArray(terms) ? terms : parseList(terms)).forEach((term) => {
-    const clean = cleanNamingName(term);
+    const clean = formatNamingName(term);
     if (!clean) return;
     const key = clean.toLowerCase();
     if (seen.has(key)) return;
@@ -1557,17 +1596,17 @@ function uniqueCleanTerms(terms) {
 }
 
 function appendLexiconTerm(currentName, term) {
-  const cleanTerm = cleanNamingName(term);
-  if (!cleanTerm) return cleanNamingName(currentName);
-  const parts = cleanNamingName(currentName).split(/_+/).filter(Boolean);
+  const cleanTerm = formatNamingName(term);
+  if (!cleanTerm) return formatNamingName(currentName);
+  const parts = formatNamingName(currentName).split(/_+/).filter(Boolean);
   if (parts.some((part) => part.toLowerCase() === cleanTerm.toLowerCase())) return parts.join("_");
   return [...parts, cleanTerm].join("_");
 }
 
 function toggleLexiconTerm(currentName, term) {
-  const cleanTerm = cleanNamingName(term);
-  if (!cleanTerm) return cleanNamingName(currentName);
-  const parts = cleanNamingName(currentName).split(/_+/).filter(Boolean);
+  const cleanTerm = formatNamingName(term);
+  if (!cleanTerm) return formatNamingName(currentName);
+  const parts = formatNamingName(currentName).split(/_+/).filter(Boolean);
   const nextParts = parts.filter((part) => part.toLowerCase() !== cleanTerm.toLowerCase());
   if (nextParts.length !== parts.length) return nextParts.join("_");
   return [...parts, cleanTerm].join("_");
@@ -1903,6 +1942,15 @@ function cleanNamingName(name) {
     .join("_");
 }
 
+function shouldUseLowercaseNaming() {
+  return isYyslsProject(getActiveProject()) || /yysls|燕云|十六声/i.test(rules.projectName || "");
+}
+
+function formatNamingName(name) {
+  const clean = cleanNamingName(name);
+  return shouldUseLowercaseNaming() ? clean.toLowerCase() : clean;
+}
+
 function sanitizePrefix(prefix) {
   return String(prefix || "")
     .trim()
@@ -1912,8 +1960,8 @@ function sanitizePrefix(prefix) {
 }
 
 function appendPart(base, part) {
-  const cleanBase = cleanNamingName(base);
-  const cleanPart = cleanNamingName(part);
+  const cleanBase = formatNamingName(base);
+  const cleanPart = formatNamingName(part);
   if (!cleanBase) return cleanPart;
   if (!cleanPart || cleanBase.endsWith("_" + cleanPart)) return cleanBase;
   return cleanBase + "_" + cleanPart;
@@ -1958,7 +2006,7 @@ async function exportRenamedFiles() {
 }
 
 function buildExportName(asset) {
-  return buildAssetPrefix(asset) + cleanNamingName(asset.finalBaseName) + asset.extension;
+  return buildAssetPrefix(asset) + formatNamingName(asset.finalBaseName) + asset.extension;
 }
 
 function buildAssetPrefix(asset) {
@@ -2584,6 +2632,7 @@ function normalizeProjects(nextProjects) {
 }
 
 function enrichProjectWithTraining(project) {
+  if (isYyslsProject(project)) return enrichYyslsProject(project);
   if (!isNgrProject(project)) return project;
   if (project.trainingVersion >= NGR_TRAINING_VERSION && isExactNgrTemplateProject(project)) return project;
   const activeSchemeName = ngrTemplateSchemeNames.includes(project.activeSchemeName) ? project.activeSchemeName : "NGR图集命名规范";
@@ -2597,6 +2646,19 @@ function enrichProjectWithTraining(project) {
 
 function isNgrProject(project) {
   return project.id === "ngr" || /NGR/i.test(project.name || "");
+}
+
+function isYyslsProject(project) {
+  return project.id === "yysls" || /yysls|燕云|十六声/i.test(project.name || "");
+}
+
+function enrichYyslsProject(project) {
+  if (project.trainingVersion >= YYSLS_TRAINING_VERSION) return project;
+  return {
+    ...project,
+    trainingVersion: YYSLS_TRAINING_VERSION,
+    schemes: project.schemes.map(enrichSchemeWithYyslsTraining),
+  };
 }
 
 function isExactNgrTemplateProject(project) {
@@ -2617,6 +2679,18 @@ function enrichSchemeWithNgrTraining(scheme) {
     stateTerms: mergeLineText(scheme.stateTerms, ngrTrainingKnowledge.stateTerms),
     filenameRules: removeRuleText(mergeRuleText(scheme.filenameRules, ngrTrainingKnowledge.filenameRules), ngrTrainingKnowledge.projectTerms.join("\n")),
     contextDocs: mergeContextText(scheme.contextDocs, ngrTrainingKnowledge.contextDocs),
+  });
+}
+
+function enrichSchemeWithYyslsTraining(scheme) {
+  return normalizeLoadedRules({
+    ...scheme,
+    tags: mergeListText(scheme.tags, yyslsTrainingKnowledge.tags),
+    pageTerms: mergeLineText(scheme.pageTerms, yyslsTrainingKnowledge.pageTerms),
+    componentTerms: mergeLineText(scheme.componentTerms, yyslsTrainingKnowledge.componentTerms),
+    stateTerms: mergeLineText(scheme.stateTerms, yyslsTrainingKnowledge.stateTerms),
+    filenameRules: mergeRuleText(scheme.filenameRules, yyslsTrainingKnowledge.filenameRules),
+    contextDocs: mergeContextText(scheme.contextDocs, yyslsTrainingKnowledge.contextDocs),
   });
 }
 
@@ -2713,10 +2787,11 @@ function buildBuiltinProjects() {
       name: "yysls",
       description: "yysls 项目",
       activeSchemeName: "yysls命名规范",
+      trainingVersion: YYSLS_TRAINING_VERSION,
       schemes: [
         builtinSchemes[1],
-        { ...builtinSchemes[1], schemeName: "yysls拼音混合规范", contextDocs: builtinSchemes[1].contextDocs + "\n优先保留团队常用拼音词，例如 AnNiu、BeiJing、TuBiao。" },
-        { ...builtinSchemes[1], schemeName: "yysls通用UI规范", contextDocs: builtinSchemes[1].contextDocs + "\n适合通用 UI 切图，允许英文组件词和拼音页面词混用。" },
+        { ...builtinSchemes[1], schemeName: "yysls拼音混合规范", contextDocs: builtinSchemes[1].contextDocs + "\n优先保留历史拼音词，例如 nielian、jianbian、huawen、zhuangshi、xuanze、yulan。" },
+        { ...builtinSchemes[1], schemeName: "yysls通用UI规范", contextDocs: builtinSchemes[1].contextDocs + "\n适合通用 UI 切图，仍需保持全小写 snake_case 和短词/拼音习惯。" },
       ],
     },
     {
