@@ -6,7 +6,7 @@ const AI_SETTINGS_KEY = "ngr-ai-autoname-ai-settings";
 const DETECTION_PROFILES_KEY = "ngr-ai-autoname-detection-profiles";
 const ACTIVE_DETECTION_PROFILE_KEY = "ngr-ai-autoname-active-detection-profile";
 const IMAGE_TYPES = ["image/png", "image/jpeg", "image/webp", "image/gif", "image/svg+xml"];
-const NGR_TRAINING_VERSION = 5;
+const NGR_TRAINING_VERSION = 6;
 const YYSLS_TRAINING_VERSION = 1;
 const FORBIDDEN_NAMING_TERMS = ["module", "modules"];
 const lexiconCategories = [
@@ -81,7 +81,7 @@ const builtinSchemes = [
     ...defaultRules,
     schemeName: "NGR图集命名规范",
     projectName: "NGR",
-    contextDocs: "该项目由驼峰命名规则首字母大写。命名应优先使用英文 Pascal Case 词组，并用下划线连接，例如 Home_Button_Normal。",
+    contextDocs: "该项目由驼峰命名规则首字母大写。命名应优先使用英文 Pascal Case 词组但要支持公认的缩写英文，并用下划线连接，例如 Home_Button_Normal。",
   },
   {
     ...defaultRules,
@@ -182,8 +182,8 @@ const ngrTemplateSchemes = [
     stateTerms: ngrTrainingKnowledge.stateTerms,
     filenameRules: ngrTrainingKnowledge.filenameRules,
     contextDocs: [
-      "该项目由驼峰命名规则首字母大写。命名应优先使用英文 Pascal Case 词组，并用下划线连接，例如 Home_Button_Normal。",
-      "重点识别 Button、Normal、Hover、Active、Disabled 等按钮状态。",
+      "该项目由驼峰命名规则首字母大写。命名应优先使用英文 Pascal Case 词组但要支持公认的缩写英文，并用下划线连接，例如 Home_Button_Normal。",
+      "根据图片的相似性重点识别不同状态切图 Button、Normal、Hover、Active、Disabled 等按钮状态。",
       "可以根据切图自带的中文命名进行英文翻译，使用简洁的英文填入。",
       "命名结构固定为：T_UI_用户填写工程名_AI生成语义名。工程名只能来自当前界面工程名，不允许 AI 使用工程目录名作为语义词。",
       ngrTrainingKnowledge.contextDocs
