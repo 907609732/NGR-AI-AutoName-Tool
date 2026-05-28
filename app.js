@@ -341,6 +341,7 @@ const els = {
   assetList: document.querySelector("#assetList"),
   fileCount: document.querySelector("#fileCount"),
   runNaming: document.querySelector("#runNaming"),
+  runLocalNaming: document.querySelector("#runLocalNaming"),
   stopNaming: document.querySelector("#stopNaming"),
   exportFiles: document.querySelector("#exportFiles"),
   batchSuffix: document.querySelector("#batchSuffix"),
@@ -934,6 +935,7 @@ function readEntryFiles(entry) {
 
 function bindEditor() {
   els.runNaming.addEventListener("click", runNaming);
+  els.runLocalNaming.addEventListener("click", runLocalNaming);
   els.stopNaming.addEventListener("click", stopNaming);
   els.applySuffix.addEventListener("click", applyBatchSuffix);
   els.problemFilter.addEventListener("click", toggleProblemFilter);
@@ -952,17 +954,26 @@ function bindEditor() {
 }
 
 async function runNaming() {
+  return runNamingWorkflow({ useAi: true });
+}
+
+async function runLocalNaming() {
+  return runNamingWorkflow({ useAi: false });
+}
+
+async function runNamingWorkflow({ useAi }) {
   if (!assets.length) {
     showToast("请先上传切图文件");
     return;
   }
   const apiKey = aiSettings.apiKey.trim();
+  const shouldUseAi = useAi && Boolean(apiKey);
   stopRequested = false;
   assets.forEach((asset) => {
     asset.namingStatus = "pending";
     asset.statusMessage = "";
   });
-  setRunButtonLoading(true, "AI 命名中 0/" + assets.length);
+  setRunButtonLoading(true, (shouldUseAi ? "AI 命名中 " : "本地命名中 ") + "0/" + assets.length);
   renderAssetList();
 
   for (let index = 0; index < assets.length; index += 1) {
@@ -972,18 +983,18 @@ async function runNaming() {
     let recommendations = localRecommendations;
     asset.namingStatus = "running";
     asset.statusMessage = "正在处理第 " + (index + 1) + " 张";
-    setRunButtonLoading(true, "AI 命名中 " + index + "/" + assets.length);
+    setRunButtonLoading(true, (shouldUseAi ? "AI 命名中 " : "本地命名中 ") + index + "/" + assets.length);
     renderAssetList();
 
     try {
-      if (apiKey) {
+      if (shouldUseAi) {
         namingController = new AbortController();
         recommendations = await requestAiRecommendations(asset, localRecommendations, namingController.signal);
       }
       asset.recommendations = recommendations.length ? recommendations : localRecommendations;
       asset.finalBaseName = asset.finalBaseName || asset.recommendations[0];
       asset.namingStatus = "done";
-      asset.statusMessage = apiKey ? "AI 命名完成" : "本地规则完成";
+      asset.statusMessage = shouldUseAi ? "AI 命名完成" : "本地知识库完成";
     } catch (error) {
       if (stopRequested || error.name === "AbortError") {
         asset.namingStatus = "pending";
@@ -995,19 +1006,20 @@ async function runNaming() {
       asset.namingStatus = "failed";
       asset.statusMessage = "AI 失败，已使用本地推荐";
     }
-    setRunButtonLoading(true, "AI 命名中 " + (index + 1) + "/" + assets.length);
+    setRunButtonLoading(true, (shouldUseAi ? "AI 命名中 " : "本地命名中 ") + (index + 1) + "/" + assets.length);
     renderAssetList();
   }
 
   namingController = null;
   setRunButtonLoading(false);
   renderAssetList();
-  showToast(stopRequested ? "已终止命名" : apiKey ? "AI 推荐命名已完成" : "已使用本地知识库生成推荐名称");
+  showToast(stopRequested ? "已终止命名" : shouldUseAi ? "AI 推荐命名已完成" : "已使用本地知识库生成推荐名称");
 }
 
 function setRunButtonLoading(isLoading, label = "运行 AI 命名") {
   els.runNaming.disabled = isLoading;
   els.runNaming.textContent = label;
+  els.runLocalNaming.disabled = isLoading;
   els.stopNaming.disabled = false;
   els.stopNaming.textContent = "终止命名";
   els.stopNaming.classList.toggle("hidden", !isLoading);
