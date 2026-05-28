@@ -2955,7 +2955,7 @@ function getDefaultDetectionProfiles() {
   return [
     {
       id: "ngr-detection",
-      name: "NGR切图检测规范",
+      name: "NGR",
       mode: "ngr",
       maxSide: 1024,
       backgroundWidth: 3440,
@@ -2965,8 +2965,8 @@ function getDefaultDetectionProfiles() {
       atlasMultiple: 2,
     },
     {
-      id: "common-detection",
-      name: "通用切图检测规范",
+      id: "more-detection",
+      name: "更多项目组正在开发中",
       mode: "ngr",
       maxSide: 1024,
       backgroundWidth: 3440,
@@ -2981,11 +2981,22 @@ function getDefaultDetectionProfiles() {
 function loadDetectionProfiles() {
   try {
     const saved = JSON.parse(localStorage.getItem(DETECTION_PROFILES_KEY));
-    if (Array.isArray(saved) && saved.length) return saved.map(normalizeDetectionProfile);
+    if (Array.isArray(saved) && saved.length) return ensureDefaultDetectionProfiles(saved.map(normalizeDetectionProfile));
   } catch {
     // Rebuild below.
   }
   return getDefaultDetectionProfiles().map(normalizeDetectionProfile);
+}
+
+function ensureDefaultDetectionProfiles(nextProfiles) {
+  const profiles = nextProfiles.map((profile) => {
+    if (profile.id === "ngr-detection" || profile.name === "NGR切图检测规范") return { ...profile, id: "ngr-detection", name: "NGR" };
+    return profile;
+  });
+  getDefaultDetectionProfiles().forEach((defaultProfile) => {
+    if (!profiles.some((profile) => profile.id === defaultProfile.id)) profiles.push(normalizeDetectionProfile(defaultProfile));
+  });
+  return profiles;
 }
 
 function loadActiveDetectionProfileId(nextProfiles) {
