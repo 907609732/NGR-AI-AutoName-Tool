@@ -968,23 +968,30 @@ async function runNamingWorkflow({ useAi }) {
   }
   const apiKey = aiSettings.apiKey.trim();
   const shouldUseAi = useAi && Boolean(apiKey);
+  const knowledge = parseKnowledge();
+  const progressLabel = shouldUseAi ? "AI 命名中 " : "本地命名中 ";
+  const progressStep = shouldUseAi ? 1 : 20;
   stopRequested = false;
   assets.forEach((asset) => {
     asset.namingStatus = "pending";
     asset.statusMessage = "";
   });
-  setRunButtonLoading(true, (shouldUseAi ? "AI 命名中 " : "本地命名中 ") + "0/" + assets.length);
+  setRunButtonLoading(true, progressLabel + "0/" + assets.length);
   renderAssetList();
+  await yieldToBrowser();
 
   for (let index = 0; index < assets.length; index += 1) {
     if (stopRequested) break;
     const asset = assets[index];
-    const localRecommendations = makeRecommendations(asset);
+    const localRecommendations = makeRecommendations(asset, knowledge);
     let recommendations = localRecommendations;
     asset.namingStatus = "running";
     asset.statusMessage = "正在处理第 " + (index + 1) + " 张";
-    setRunButtonLoading(true, (shouldUseAi ? "AI 命名中 " : "本地命名中 ") + index + "/" + assets.length);
-    renderAssetList();
+    setRunButtonLoading(true, progressLabel + index + "/" + assets.length);
+    if (shouldUseAi || index % progressStep === 0) {
+      renderAssetList();
+      await yieldToBrowser();
+    }
 
     try {
       if (shouldUseAi) {
@@ -1006,14 +1013,21 @@ async function runNamingWorkflow({ useAi }) {
       asset.namingStatus = "failed";
       asset.statusMessage = "AI 失败，已使用本地推荐";
     }
-    setRunButtonLoading(true, (shouldUseAi ? "AI 命名中 " : "本地命名中 ") + (index + 1) + "/" + assets.length);
-    renderAssetList();
+    setRunButtonLoading(true, progressLabel + (index + 1) + "/" + assets.length);
+    if (shouldUseAi || (index + 1) % progressStep === 0 || index === assets.length - 1) {
+      renderAssetList();
+      await yieldToBrowser();
+    }
   }
 
   namingController = null;
   setRunButtonLoading(false);
   renderAssetList();
   showToast(stopRequested ? "已终止命名" : shouldUseAi ? "AI 推荐命名已完成" : "已使用本地知识库生成推荐名称");
+}
+
+function yieldToBrowser() {
+  return new Promise((resolve) => requestAnimationFrame(() => resolve()));
 }
 
 function setRunButtonLoading(isLoading, label = "运行 AI 命名") {
@@ -1801,6 +1815,7 @@ function renderAssetList() {
 
   els.assetList.className = "asset-list-body" + (listDisplayMode === "compact" ? " compact-list-mode" : "");
   els.assetList.innerHTML = "";
+  const duplicateContext = buildDuplicateStatusContext();
   visibleAssets.forEach((asset) => {
     const row = document.createElement("div");
     row.className = "asset-item" + (asset.dimensionIssue ? " has-issue" : asset.dimensionWarning ? " has-warning" : "") + (asset.id === selectedId ? " active" : "");
@@ -1833,10 +1848,10 @@ function renderAssetList() {
     const dimensionCheck = createMetaLine("分辨率检查", asset.dimensionIssue || asset.dimensionWarning ? asset.dimensionIssueMessage : "通过");
     dimensionCheck.classList.add("full-line");
     dimensionCheck.classList.toggle("warning-line", asset.dimensionIssue || asset.dimensionWarning);
-    const duplicateStatus = getDuplicateStatus(asset);
+    const duplicateStatus = getDuplicateStatus(asset, duplicateContext);
     const duplicateCheck = createMetaLine("重名检测", duplicateStatus.message);
     duplicateCheck.classList.toggle("warning-line", duplicateStatus.hasIssue);
-    const historyMatch = getHistoricalModuleMatch();
+    const historyMatch = duplicateContext.historicalMatch;
     const historyLine = createMetaLine("历史工程", historyMatch ? historyMatch.name + " / " + historyMatch.fileCount + " 张" : "未匹配");
     const status = document.createElement("span");
     status.className = "status-badge status-" + getAssetStatus(asset);
@@ -1977,6 +1992,18 @@ function renderAssetList() {
     els.assetList.appendChild(row);
   });
   protectEditableShortcuts(els.assetList);
+}
+
+function buildDuplicateStatusContext() {
+  const counts = new Map();
+  assets.forEach((asset) => {
+    if (!asset.finalBaseName) return;
+    const exportName = buildExportName(asset).toLowerCase();
+    counts.set(exportName, (counts.get(exportName) || 0) + 1);
+  });
+  const historicalMatch = getHistoricalModuleMatch();
+  const historicalNames = new Set((historicalMatch?.filenames || []).map((name) => String(name).toLowerCase()));
+  return { counts, historicalMatch, historicalNames };
 }
 
 function fillListDisplayMode() {
@@ -2120,9 +2147,9 @@ function getAssetStatusText(asset) {
   return labels[status] || "待命名";
 }
 
-function makeRecommendations(asset) {
+function makeRecommendations(asset, cachedKnowledge) {
   const source = normalizeSourceName(asset.originalBase);
-  const knowledge = parseKnowledge();
+  const knowledge = cachedKnowledge || parseKnowledge();
   const mapped = inferMappedTerms(source, knowledge);
   const tags = parseTags(rules.tags);
   const translatedSource = translateFilename(source, knowledge);
@@ -2211,14 +2238,13 @@ function getHistoricalModuleMatch() {
   return null;
 }
 
-function getDuplicateStatus(asset) {
+function getDuplicateStatus(asset, context = buildDuplicateStatusContext()) {
   if (!asset.finalBaseName) return { hasIssue: false, message: "待命名" };
   const exportName = buildExportName(asset).toLowerCase();
-  const batchCount = assets.filter((item) => item.finalBaseName && buildExportName(item).toLowerCase() === exportName).length;
+  const batchCount = context.counts?.get(exportName) || 0;
   if (batchCount > 1) return { hasIssue: true, message: "当前批次重名" };
-  const historicalMatch = getHistoricalModuleMatch();
-  const historicalNames = historicalMatch?.filenames || [];
-  if (historicalNames.some((name) => String(name).toLowerCase() === exportName)) {
+  const historicalMatch = context.historicalMatch;
+  if (context.historicalNames?.has(exportName)) {
     return { hasIssue: true, message: "历史重名：" + historicalMatch.name };
   }
   return historicalMatch ? { hasIssue: false, message: "未重名 / 已匹配 " + historicalMatch.name } : { hasIssue: false, message: "未匹配历史工程" };
