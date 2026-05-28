@@ -429,6 +429,7 @@ function bindNavigation() {
 function showView(name) {
   Object.entries(els.views).forEach(([key, node]) => node.classList.toggle("active", key === name));
   els.backButton.classList.toggle("hidden", name === "home");
+  els.rulesEntry.classList.toggle("hidden", name === "detect" || name === "detectionSettings");
   const hints = {
     home: "批量整理 UI 切图名称，让文件名保持统一、清楚、可追踪。",
     rules: "配置全局命名前缀、分隔符与通用标签。工程名可在开始命名页按当前界面填写。",
