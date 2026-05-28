@@ -3,6 +3,7 @@ const SCHEME_KEY = "ngr-ai-autoname-rule-schemes";
 const PROJECTS_KEY = "ngr-ai-autoname-projects";
 const ACTIVE_PROJECT_KEY = "ngr-ai-autoname-active-project";
 const AI_SETTINGS_KEY = "ngr-ai-autoname-ai-settings";
+const TRANSLATION_SETTINGS_KEY = "ngr-ai-autoname-translation-settings";
 const DETECTION_PROFILES_KEY = "ngr-ai-autoname-detection-profiles";
 const ACTIVE_DETECTION_PROFILE_KEY = "ngr-ai-autoname-active-detection-profile";
 const LIST_DISPLAY_MODE_KEY = "ngr-ai-autoname-list-display-mode";
@@ -261,6 +262,7 @@ let activeProjectId = loadActiveProjectId(projects);
 let schemes = getActiveProject().schemes;
 let rules = normalizeLoadedRules({ ...defaultRules, ...getProjectActiveScheme(getActiveProject()) });
 let aiSettings = loadAiSettings();
+let translationSettings = loadTranslationSettings();
 let assets = [];
 let detectionProfiles = loadDetectionProfiles();
 let activeDetectionProfileId = loadActiveDetectionProfileId(detectionProfiles);
@@ -376,6 +378,14 @@ const els = {
   translatorPanel: document.querySelector("#translatorPanel"),
   translatorToggle: document.querySelector("#translatorToggle"),
   translatorClose: document.querySelector("#translatorClose"),
+  translatorSettingsToggle: document.querySelector("#translatorSettingsToggle"),
+  translatorSettings: document.querySelector("#translatorSettings"),
+  translatorProvider: document.querySelector("#translatorProvider"),
+  baiduTranslateAppId: document.querySelector("#baiduTranslateAppId"),
+  baiduTranslateSecret: document.querySelector("#baiduTranslateSecret"),
+  baiduTranslateEndpoint: document.querySelector("#baiduTranslateEndpoint"),
+  saveTranslatorSettings: document.querySelector("#saveTranslatorSettings"),
+  testTranslatorSettings: document.querySelector("#testTranslatorSettings"),
   translatorInput: document.querySelector("#translatorInput"),
   translatorToName: document.querySelector("#translatorToName"),
   translatorExplain: document.querySelector("#translatorExplain"),
@@ -398,6 +408,7 @@ function init() {
   fillRulesForm();
   fillDetectionProfileForm();
   fillAiSettings();
+  fillTranslationSettings();
   upsertScheme(rules, false);
   saveProjects();
   renderProjectSelect();
@@ -781,19 +792,73 @@ function bindTranslator() {
   els.translatorClose.addEventListener("click", () => {
     els.translatorPanel.classList.add("collapsed");
   });
-  els.translatorToName.addEventListener("click", () => {
+  els.translatorSettingsToggle.addEventListener("click", () => {
+    els.translatorSettings.classList.toggle("hidden");
+  });
+  els.saveTranslatorSettings.addEventListener("click", () => {
+    translationSettings = collectTranslationSettings();
+    saveTranslationSettings(translationSettings);
+    showToast("翻译 API 设置已保存");
+  });
+  els.testTranslatorSettings.addEventListener("click", testTranslationSettings);
+  els.translatorToName.addEventListener("click", async () => {
     const source = normalizeSourceName(els.translatorInput.value);
     if (!source) {
       els.translatorOutput.textContent = "请输入中文文件名、英文命名或单词";
       return;
     }
-    const translated = cleanNamingName(translateFilename(source, parseKnowledge()));
-    els.translatorOutput.textContent = translated ? "命名词：" + translated + "\n中文含义：" + explainEnglishName(translated) : "没有匹配到可用命名词";
+    els.translatorOutput.textContent = "翻译中...";
+    const translated = await translateToNamingWord(source);
+    els.translatorOutput.textContent = translated ? "命名词：" + translated + "\n中文含义：" + await explainNameWithTranslation(translated) : "没有匹配到可用命名词";
   });
-  els.translatorExplain.addEventListener("click", () => {
+  els.translatorExplain.addEventListener("click", async () => {
     const source = cleanNamingName(els.translatorInput.value);
-    els.translatorOutput.textContent = source ? explainEnglishName(source) : "请输入需要解释的英文命名";
+    els.translatorOutput.textContent = source ? "翻译中..." : "请输入需要解释的英文命名";
+    if (source) els.translatorOutput.textContent = await explainNameWithTranslation(source);
   });
+}
+
+async function translateToNamingWord(source) {
+  const localName = cleanNamingName(translateFilename(source, parseKnowledge()));
+  if (translationSettings.provider !== "baidu") return localName;
+  try {
+    const apiText = await translateTextByApi(source, "zh", "en");
+    const apiName = cleanNamingName(String(apiText || "").replace(/([a-z])([A-Z])/g, "$1_$2").replace(/[^A-Za-z0-9_]+/g, "_"));
+    return apiName || localName;
+  } catch (error) {
+    return localName || "";
+  }
+}
+
+async function explainNameWithTranslation(name) {
+  const localMeaning = explainEnglishName(name);
+  if (translationSettings.provider !== "baidu") return localMeaning;
+  try {
+    const readable = cleanNamingName(name).replace(/_/g, " ");
+    const apiText = await translateTextByApi(readable, "en", "zh");
+    return apiText || localMeaning;
+  } catch (error) {
+    return localMeaning + "\n提示：百度翻译 API 调用失败，已使用本地词库解释。";
+  }
+}
+
+async function testTranslationSettings() {
+  translationSettings = collectTranslationSettings();
+  saveTranslationSettings(translationSettings);
+  els.translatorOutput.textContent = "正在测试翻译 API...";
+  if (translationSettings.provider !== "baidu") {
+    els.translatorOutput.textContent = "当前使用本地词库，不需要测试 API。";
+    showToast("当前使用本地词库");
+    return;
+  }
+  try {
+    const result = await translateTextByApi("测试", "zh", "en");
+    els.translatorOutput.textContent = "测试成功：测试 -> " + result;
+    showToast("百度翻译 API 测试成功");
+  } catch (error) {
+    els.translatorOutput.textContent = "测试失败：" + error.message;
+    showToast("百度翻译 API 测试失败");
+  }
 }
 
 function switchDetectionProfile(profileId) {
@@ -1572,6 +1637,102 @@ function isPowerOfTwo(value) {
   return Number.isInteger(value) && value > 0 && (value & (value - 1)) === 0;
 }
 
+function md5(value) {
+  const rotate = (x, c) => (x << c) | (x >>> (32 - c));
+  const add = (x, y) => (((x >>> 0) + (y >>> 0)) & 0xffffffff) >>> 0;
+  const cmn = (q, a, b, x, s, t) => add(rotate(add(add(a, q), add(x, t)), s), b);
+  const ff = (a, b, c, d, x, s, t) => cmn((b & c) | (~b & d), a, b, x, s, t);
+  const gg = (a, b, c, d, x, s, t) => cmn((b & d) | (c & ~d), a, b, x, s, t);
+  const hh = (a, b, c, d, x, s, t) => cmn(b ^ c ^ d, a, b, x, s, t);
+  const ii = (a, b, c, d, x, s, t) => cmn(c ^ (b | ~d), a, b, x, s, t);
+  const text = unescape(encodeURIComponent(String(value || "")));
+  const words = [];
+  for (let index = 0; index < text.length; index += 1) {
+    words[index >> 2] = (words[index >> 2] || 0) | (text.charCodeAt(index) << ((index % 4) * 8));
+  }
+  words[text.length >> 2] = (words[text.length >> 2] || 0) | (0x80 << ((text.length % 4) * 8));
+  words[(((text.length + 8) >> 6) + 1) * 16 - 2] = text.length * 8;
+  let a = 1732584193;
+  let b = -271733879;
+  let c = -1732584194;
+  let d = 271733878;
+  for (let index = 0; index < words.length; index += 16) {
+    const oldA = a;
+    const oldB = b;
+    const oldC = c;
+    const oldD = d;
+    a = ff(a, b, c, d, words[index], 7, -680876936);
+    d = ff(d, a, b, c, words[index + 1], 12, -389564586);
+    c = ff(c, d, a, b, words[index + 2], 17, 606105819);
+    b = ff(b, c, d, a, words[index + 3], 22, -1044525330);
+    a = ff(a, b, c, d, words[index + 4], 7, -176418897);
+    d = ff(d, a, b, c, words[index + 5], 12, 1200080426);
+    c = ff(c, d, a, b, words[index + 6], 17, -1473231341);
+    b = ff(b, c, d, a, words[index + 7], 22, -45705983);
+    a = ff(a, b, c, d, words[index + 8], 7, 1770035416);
+    d = ff(d, a, b, c, words[index + 9], 12, -1958414417);
+    c = ff(c, d, a, b, words[index + 10], 17, -42063);
+    b = ff(b, c, d, a, words[index + 11], 22, -1990404162);
+    a = ff(a, b, c, d, words[index + 12], 7, 1804603682);
+    d = ff(d, a, b, c, words[index + 13], 12, -40341101);
+    c = ff(c, d, a, b, words[index + 14], 17, -1502002290);
+    b = ff(b, c, d, a, words[index + 15], 22, 1236535329);
+    a = gg(a, b, c, d, words[index + 1], 5, -165796510);
+    d = gg(d, a, b, c, words[index + 6], 9, -1069501632);
+    c = gg(c, d, a, b, words[index + 11], 14, 643717713);
+    b = gg(b, c, d, a, words[index], 20, -373897302);
+    a = gg(a, b, c, d, words[index + 5], 5, -701558691);
+    d = gg(d, a, b, c, words[index + 10], 9, 38016083);
+    c = gg(c, d, a, b, words[index + 15], 14, -660478335);
+    b = gg(b, c, d, a, words[index + 4], 20, -405537848);
+    a = gg(a, b, c, d, words[index + 9], 5, 568446438);
+    d = gg(d, a, b, c, words[index + 14], 9, -1019803690);
+    c = gg(c, d, a, b, words[index + 3], 14, -187363961);
+    b = gg(b, c, d, a, words[index + 8], 20, 1163531501);
+    a = gg(a, b, c, d, words[index + 13], 5, -1444681467);
+    d = gg(d, a, b, c, words[index + 2], 9, -51403784);
+    c = gg(c, d, a, b, words[index + 7], 14, 1735328473);
+    b = gg(b, c, d, a, words[index + 12], 20, -1926607734);
+    a = hh(a, b, c, d, words[index + 5], 4, -378558);
+    d = hh(d, a, b, c, words[index + 8], 11, -2022574463);
+    c = hh(c, d, a, b, words[index + 11], 16, 1839030562);
+    b = hh(b, c, d, a, words[index + 14], 23, -35309556);
+    a = hh(a, b, c, d, words[index + 1], 4, -1530992060);
+    d = hh(d, a, b, c, words[index + 4], 11, 1272893353);
+    c = hh(c, d, a, b, words[index + 7], 16, -155497632);
+    b = hh(b, c, d, a, words[index + 10], 23, -1094730640);
+    a = hh(a, b, c, d, words[index + 13], 4, 681279174);
+    d = hh(d, a, b, c, words[index], 11, -358537222);
+    c = hh(c, d, a, b, words[index + 3], 16, -722521979);
+    b = hh(b, c, d, a, words[index + 6], 23, 76029189);
+    a = hh(a, b, c, d, words[index + 9], 4, -640364487);
+    d = hh(d, a, b, c, words[index + 12], 11, -421815835);
+    c = hh(c, d, a, b, words[index + 15], 16, 530742520);
+    b = hh(b, c, d, a, words[index + 2], 23, -995338651);
+    a = ii(a, b, c, d, words[index], 6, -198630844);
+    d = ii(d, a, b, c, words[index + 7], 10, 1126891415);
+    c = ii(c, d, a, b, words[index + 14], 15, -1416354905);
+    b = ii(b, c, d, a, words[index + 5], 21, -57434055);
+    a = ii(a, b, c, d, words[index + 12], 6, 1700485571);
+    d = ii(d, a, b, c, words[index + 3], 10, -1894986606);
+    c = ii(c, d, a, b, words[index + 10], 15, -1051523);
+    b = ii(b, c, d, a, words[index + 1], 21, -2054922799);
+    a = ii(a, b, c, d, words[index + 8], 6, 1873313359);
+    d = ii(d, a, b, c, words[index + 15], 10, -30611744);
+    c = ii(c, d, a, b, words[index + 6], 15, -1560198380);
+    b = ii(b, c, d, a, words[index + 13], 21, 1309151649);
+    a = ii(a, b, c, d, words[index + 4], 6, -145523070);
+    d = ii(d, a, b, c, words[index + 11], 10, -1120210379);
+    c = ii(c, d, a, b, words[index + 2], 15, 718787259);
+    b = ii(b, c, d, a, words[index + 9], 21, -343485551);
+    a = add(a, oldA);
+    b = add(b, oldB);
+    c = add(c, oldC);
+    d = add(d, oldD);
+  }
+  return [a, b, c, d].map((word) => [0, 8, 16, 24].map((shift) => ("0" + ((word >>> shift) & 255).toString(16)).slice(-2)).join("")).join("");
+}
+
 function renderAssetList() {
   const problemCount = assets.filter((asset) => asset.dimensionIssue).length;
   els.fileCount.textContent = assets.length + " 张" + (problemCount ? " / " + problemCount + " 张问题" : "");
@@ -2145,6 +2306,30 @@ function translateTextByDictionary(value) {
       result = result.split(zh).join("_" + en + "_");
     });
   return result;
+}
+
+async function translateTextByApi(text, from, to) {
+  if (translationSettings.provider !== "baidu") return "";
+  if (!translationSettings.baiduAppId || !translationSettings.baiduSecret) {
+    throw new Error("请先填写百度翻译 App ID 和密钥");
+  }
+  const salt = String(Date.now());
+  const query = String(text || "").trim();
+  if (!query) return "";
+  const sign = md5(translationSettings.baiduAppId + query + salt + translationSettings.baiduSecret);
+  const params = new URLSearchParams({
+    q: query,
+    from,
+    to,
+    appid: translationSettings.baiduAppId,
+    salt,
+    sign,
+  });
+  const response = await fetch(translationSettings.baiduEndpoint + "?" + params.toString());
+  if (!response.ok) throw new Error("接口请求失败：" + response.status);
+  const data = await response.json();
+  if (data.error_code) throw new Error((data.error_code || "") + " " + (data.error_msg || "百度翻译返回错误"));
+  return (data.trans_result || []).map((item) => item.dst).join(" ").trim();
 }
 
 function explainEnglishName(name) {
@@ -2950,6 +3135,48 @@ function loadAiSettings() {
 
 function saveAiSettings(nextSettings) {
   localStorage.setItem(AI_SETTINGS_KEY, JSON.stringify(nextSettings));
+}
+
+function collectTranslationSettings() {
+  return normalizeTranslationSettings({
+    provider: els.translatorProvider.value || "local",
+    baiduAppId: els.baiduTranslateAppId.value.trim(),
+    baiduSecret: els.baiduTranslateSecret.value.trim(),
+    baiduEndpoint: normalizeTranslateEndpoint(els.baiduTranslateEndpoint.value),
+  });
+}
+
+function fillTranslationSettings() {
+  els.translatorProvider.value = translationSettings.provider;
+  els.baiduTranslateAppId.value = translationSettings.baiduAppId;
+  els.baiduTranslateSecret.value = translationSettings.baiduSecret;
+  els.baiduTranslateEndpoint.value = translationSettings.baiduEndpoint;
+}
+
+function loadTranslationSettings() {
+  try {
+    return normalizeTranslationSettings(JSON.parse(localStorage.getItem(TRANSLATION_SETTINGS_KEY)));
+  } catch {
+    return normalizeTranslationSettings();
+  }
+}
+
+function saveTranslationSettings(nextSettings) {
+  localStorage.setItem(TRANSLATION_SETTINGS_KEY, JSON.stringify(nextSettings));
+}
+
+function normalizeTranslationSettings(nextSettings = {}) {
+  nextSettings = nextSettings || {};
+  return {
+    provider: nextSettings.provider === "baidu" ? "baidu" : "local",
+    baiduAppId: nextSettings.baiduAppId || "",
+    baiduSecret: nextSettings.baiduSecret || "",
+    baiduEndpoint: normalizeTranslateEndpoint(nextSettings.baiduEndpoint || "https://fanyi-api.baidu.com/api/trans/vip/translate"),
+  };
+}
+
+function normalizeTranslateEndpoint(value) {
+  return String(value || "").trim().replace(/\/+$/, "") || "https://fanyi-api.baidu.com/api/trans/vip/translate";
 }
 
 function normalizeAiSettings(nextSettings = {}) {

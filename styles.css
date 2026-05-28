@@ -1405,11 +1405,58 @@ button:disabled {
   margin-bottom: 10px;
 }
 
-.translator-head button {
+.translator-head-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.translator-head button,
+.translator-settings-actions button {
   width: 30px;
   min-height: 30px;
   padding: 0;
   border-radius: 50%;
+}
+
+.translator-settings {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 10px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #f8fbfc;
+}
+
+.translator-settings.hidden {
+  display: none;
+}
+
+.translator-settings label {
+  gap: 5px;
+}
+
+.translator-settings input,
+.translator-settings select {
+  height: 36px;
+}
+
+.translator-settings-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.translator-settings-actions button {
+  width: auto;
+  border-radius: 8px;
+  font-size: 13px;
+}
+
+.translator-settings small {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
 }
 
 .translator-body textarea {

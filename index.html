@@ -11,7 +11,7 @@
       <header class="topbar">
         <button class="back-button hidden" id="backButton" type="button" aria-label="返回主界面">←</button>
         <div class="topbar-title">
-          <h1>NGRAI辅助UI切图命名工具 <span class="version-badge">V1.36</span></h1>
+          <h1>NGRAI辅助UI切图命名工具 <span class="version-badge">V1.37</span></h1>
           <p id="pageHint">批量整理 UI 切图名称，让文件名保持统一、清楚、可追踪。</p>
         </div>
         <button class="settings-button" id="rulesEntry" type="button" aria-label="命名规则设置" title="命名规则设置">⚙</button>
@@ -36,7 +36,7 @@
 
         <section class="view rules-view" id="rulesView">
           <div class="section-head">
-            <h2>命名规则 <span class="version-badge">V1.36</span></h2>
+            <h2>命名规则 <span class="version-badge">V1.37</span></h2>
             <p>这些设置会自动保存，并在命名流程中作为全局前缀使用。</p>
           </div>
 
@@ -454,7 +454,36 @@
         <div class="translator-body">
           <div class="translator-head">
             <strong>命名单词翻译</strong>
-            <button id="translatorClose" type="button" aria-label="收起翻译面板">×</button>
+            <div class="translator-head-actions">
+              <button id="translatorSettingsToggle" type="button" aria-label="翻译 API 设置" title="翻译 API 设置">⚙</button>
+              <button id="translatorClose" type="button" aria-label="收起翻译面板">×</button>
+            </div>
+          </div>
+          <div class="translator-settings hidden" id="translatorSettings">
+            <label>
+              <span>翻译方式</span>
+              <select id="translatorProvider">
+                <option value="local">本地词库</option>
+                <option value="baidu">百度翻译 API</option>
+              </select>
+            </label>
+            <label>
+              <span>百度 App ID</span>
+              <input id="baiduTranslateAppId" type="text" placeholder="请输入百度翻译 App ID" />
+            </label>
+            <label>
+              <span>百度密钥</span>
+              <input id="baiduTranslateSecret" type="password" placeholder="请输入百度翻译密钥" />
+            </label>
+            <label>
+              <span>接口地址</span>
+              <input id="baiduTranslateEndpoint" type="text" placeholder="https://fanyi-api.baidu.com/api/trans/vip/translate" />
+            </label>
+            <div class="translator-settings-actions">
+              <button id="saveTranslatorSettings" class="primary-action" type="button">保存翻译设置</button>
+              <button id="testTranslatorSettings" class="ghost-action" type="button">测试 API</button>
+            </div>
+            <small>百度翻译 API 配置会保存在当前浏览器本地。若浏览器拦截跨域请求，会自动提示并使用本地词库兜底。</small>
           </div>
           <textarea id="translatorInput" rows="4" placeholder="输入中文文件名、英文命名或单词"></textarea>
           <div class="translator-actions">
