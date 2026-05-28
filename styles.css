@@ -260,6 +260,7 @@ label {
 }
 
 label span,
+.batch-field > span,
 .recommend-block > span {
   color: var(--muted);
   font-size: 13px;
@@ -827,11 +828,34 @@ button:disabled {
 
 .batch-tools {
   display: grid;
-  grid-template-columns: minmax(0, 220px) minmax(0, 220px) minmax(0, 160px) minmax(0, 160px) auto auto auto;
+  grid-template-columns: minmax(0, 220px) minmax(300px, 1.25fr) minmax(0, 160px) minmax(0, 160px) auto auto;
   gap: 10px;
   align-items: end;
   padding-top: 18px;
   border-top: 1px solid var(--line);
+}
+
+.batch-field {
+  display: grid;
+  gap: 8px;
+}
+
+.suffix-apply-group {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: stretch;
+}
+
+.suffix-apply-group input {
+  border-radius: 8px 0 0 8px;
+}
+
+.suffix-apply-group .ghost-action {
+  min-width: 130px;
+  border-left: 0;
+  border-radius: 0 8px 8px 0;
+  background: #f8fbfc;
+  white-space: nowrap;
 }
 
 .toast {
