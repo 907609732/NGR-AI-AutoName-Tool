@@ -2841,7 +2841,7 @@ function updateActiveRuleText() {
 }
 
 function getPrefixPresetValue(prefix) {
-  const presets = ["T_UI", "T_UI_Img", "T_UI_Icon", "T_UI_Bg", "T_UI_Btn"];
+  const presets = ["T_UI", "T_UI_Img", "T_UI_Icon"];
   return presets.includes(prefix) ? prefix : "";
 }
 
