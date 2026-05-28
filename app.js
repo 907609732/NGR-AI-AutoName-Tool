@@ -351,10 +351,12 @@ const els = {
   removeSelected: document.querySelector("#removeSelected"),
   detectionProfileSelect: document.querySelector("#detectionProfileSelect"),
   detectionModeSelect: document.querySelector("#detectionModeSelect"),
+  duplicateSensitivitySelect: document.querySelector("#duplicateSensitivitySelect"),
   detectionSettingsEntry: document.querySelector("#detectionSettingsEntry"),
   detectionSettingsProfileSelect: document.querySelector("#detectionSettingsProfileSelect"),
   detectionProfileName: document.querySelector("#detectionProfileName"),
   detectionProfileMode: document.querySelector("#detectionProfileMode"),
+  duplicateSensitivityProfile: document.querySelector("#duplicateSensitivityProfile"),
   detectionMaxSide: document.querySelector("#detectionMaxSide"),
   detectionBgWidth: document.querySelector("#detectionBgWidth"),
   detectionBgHeight: document.querySelector("#detectionBgHeight"),
@@ -755,10 +757,16 @@ function bindDetection() {
     revalidateDetectionAssets();
     showToast("检测模式已切换");
   });
+  els.duplicateSensitivitySelect.addEventListener("change", () => {
+    updateActiveDetectionProfile({ ...getActiveDetectionProfile(), duplicateSensitivity: els.duplicateSensitivitySelect.value }, true);
+    fillDetectionProfileForm();
+    revalidateDetectionAssets();
+    showToast("重复检测灵敏度已切换");
+  });
   els.detectionSettingsProfileSelect.addEventListener("change", () => {
     switchDetectionProfile(els.detectionSettingsProfileSelect.value);
   });
-  [els.detectionProfileName, els.detectionProfileMode, els.detectionMaxSide, els.detectionBgWidth, els.detectionBgHeight, els.detectionLargeThreshold, els.detectionLargeMultiple, els.detectionAtlasMultiple].forEach((input) => {
+  [els.detectionProfileName, els.detectionProfileMode, els.duplicateSensitivityProfile, els.detectionMaxSide, els.detectionBgWidth, els.detectionBgHeight, els.detectionLargeThreshold, els.detectionLargeMultiple, els.detectionAtlasMultiple].forEach((input) => {
     input.addEventListener("input", () => {
       updateActiveDetectionProfile(collectDetectionProfileForm(), false);
       revalidateDetectionAssets();
@@ -1599,17 +1607,27 @@ async function imageFileToFingerprint(file) {
 }
 
 function updateSimilarResourceWarnings() {
+  const duplicateConfig = getDuplicateSensitivityConfig(getActiveDetectionProfile().duplicateSensitivity);
   detectionAssets.forEach((asset) => {
     asset.similarNames = [];
   });
+  if (duplicateConfig.disabled) {
+    detectionAssets.forEach((asset) => {
+      const baseWarnings = (asset.warnings || []).filter((message) => !message.startsWith("疑似重复资源"));
+      asset.warnings = baseWarnings;
+      asset.hasWarning = Boolean(asset.warnings.length);
+    });
+    return;
+  }
   for (let index = 0; index < detectionAssets.length; index += 1) {
     const current = detectionAssets[index];
     if (!current.fingerprint) continue;
     for (let nextIndex = index + 1; nextIndex < detectionAssets.length; nextIndex += 1) {
       const next = detectionAssets[nextIndex];
       if (!next.fingerprint) continue;
+      if (!shouldCompareDuplicateAssets(current, next, duplicateConfig)) continue;
       const similarity = getFingerprintSimilarity(current.fingerprint, next.fingerprint);
-      if (similarity >= 0.92) {
+      if (similarity >= duplicateConfig.threshold) {
         current.similarNames.push(next.name);
         next.similarNames.push(current.name);
       }
@@ -1621,6 +1639,27 @@ function updateSimilarResourceWarnings() {
     asset.warnings = [...baseWarnings, ...similarWarnings];
     asset.hasWarning = Boolean(asset.warnings.length);
   });
+}
+
+function getDuplicateSensitivityConfig(level) {
+  const configs = {
+    low: { threshold: 0.99, dimensionTolerance: 0, minSide: 48, disabled: false },
+    medium: { threshold: 0.965, dimensionTolerance: 0.06, minSide: 32, disabled: false },
+    high: { threshold: 0.92, dimensionTolerance: 0.16, minSide: 0, disabled: false },
+  };
+  return configs[level] || configs.low;
+}
+
+function shouldCompareDuplicateAssets(left, right, config) {
+  const leftWidth = left.dimensions?.width || 0;
+  const leftHeight = left.dimensions?.height || 0;
+  const rightWidth = right.dimensions?.width || 0;
+  const rightHeight = right.dimensions?.height || 0;
+  if (!leftWidth || !leftHeight || !rightWidth || !rightHeight) return false;
+  if (Math.min(leftWidth, leftHeight, rightWidth, rightHeight) < config.minSide) return false;
+  const widthTolerance = Math.abs(leftWidth - rightWidth) / Math.max(leftWidth, rightWidth);
+  const heightTolerance = Math.abs(leftHeight - rightHeight) / Math.max(leftHeight, rightHeight);
+  return widthTolerance <= config.dimensionTolerance && heightTolerance <= config.dimensionTolerance;
 }
 
 function getFingerprintSimilarity(left, right) {
@@ -2969,12 +3008,14 @@ function renderDetectionProfileSelect() {
   els.detectionProfileSelect.value = activeDetectionProfileId;
   els.detectionSettingsProfileSelect.value = activeDetectionProfileId;
   els.detectionModeSelect.value = getActiveDetectionProfile().mode;
+  els.duplicateSensitivitySelect.value = getActiveDetectionProfile().duplicateSensitivity;
 }
 
 function fillDetectionProfileForm() {
   const profile = getActiveDetectionProfile();
   els.detectionProfileName.value = profile.name;
   els.detectionProfileMode.value = profile.mode;
+  els.duplicateSensitivityProfile.value = profile.duplicateSensitivity;
   els.detectionMaxSide.value = profile.maxSide;
   els.detectionBgWidth.value = profile.backgroundWidth;
   els.detectionBgHeight.value = profile.backgroundHeight;
@@ -2989,6 +3030,7 @@ function collectDetectionProfileForm() {
     ...current,
     name: els.detectionProfileName.value,
     mode: els.detectionProfileMode.value,
+    duplicateSensitivity: els.duplicateSensitivityProfile.value,
     maxSide: els.detectionMaxSide.value,
     backgroundWidth: els.detectionBgWidth.value,
     backgroundHeight: els.detectionBgHeight.value,
@@ -3233,6 +3275,7 @@ function getDefaultDetectionProfiles() {
       largeThreshold: 512,
       largeMultiple: 4,
       atlasMultiple: 2,
+      duplicateSensitivity: "low",
     },
     {
       id: "more-detection",
@@ -3244,6 +3287,7 @@ function getDefaultDetectionProfiles() {
       largeThreshold: 512,
       largeMultiple: 4,
       atlasMultiple: 2,
+      duplicateSensitivity: "low",
     },
   ];
 }
@@ -3281,6 +3325,7 @@ function normalizeDetectionProfile(profile = {}) {
     id: profile.id || "detect-" + Date.now() + "-" + Math.random().toString(16).slice(2),
     name: String(profile.name || defaults.name).trim() || defaults.name,
     mode: ["ngr", "planner", "icon"].includes(profile.mode) ? profile.mode : defaults.mode,
+    duplicateSensitivity: ["low", "medium", "high"].includes(profile.duplicateSensitivity) ? profile.duplicateSensitivity : defaults.duplicateSensitivity,
     maxSide: toPositiveInt(profile.maxSide, defaults.maxSide),
     backgroundWidth: toPositiveInt(profile.backgroundWidth, defaults.backgroundWidth),
     backgroundHeight: toPositiveInt(profile.backgroundHeight, defaults.backgroundHeight),
