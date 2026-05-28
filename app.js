@@ -363,6 +363,8 @@ const els = {
   detectionDropZone: document.querySelector("#detectionDropZone"),
   detectionFolderInput: document.querySelector("#detectionFolderInput"),
   detectionSingleInput: document.querySelector("#detectionSingleInput"),
+  detectionRulesToggle: document.querySelector("#detectionRulesToggle"),
+  detectionRulesPanel: document.querySelector("#detectionRulesPanel"),
   detectionProblemFilter: document.querySelector("#detectionProblemFilter"),
   clearDetectionAssets: document.querySelector("#clearDetectionAssets"),
   detectionCount: document.querySelector("#detectionCount"),
@@ -750,6 +752,11 @@ function bindDetection() {
   els.newDetectionProfile.addEventListener("click", createDetectionProfile);
   els.deleteDetectionProfile.addEventListener("click", deleteDetectionProfile);
   els.detectionProblemFilter.addEventListener("click", toggleDetectionProblemFilter);
+  els.detectionRulesToggle.addEventListener("click", () => {
+    const isHidden = els.detectionRulesPanel.classList.toggle("hidden");
+    els.detectionRulesToggle.textContent = isHidden ? "查看检测规范" : "收起检测规范";
+    els.detectionRulesToggle.setAttribute("aria-expanded", String(!isHidden));
+  });
   els.clearDetectionAssets.addEventListener("click", () => {
     detectionAssets = [];
     renderDetectionList();
@@ -1299,6 +1306,11 @@ async function fileToDetectionAsset(file) {
   const url = URL.createObjectURL(file);
   const dimensions = await readImageDimensions(url).catch(() => ({ width: 0, height: 0 }));
   const result = validateDetectionDimensions(dimensions, getActiveDetectionProfile());
+  const formatMessages = validateDetectionFormat(file);
+  if (formatMessages.length) {
+    result.messages = [...(result.messages || []), ...formatMessages];
+    result.hasIssue = true;
+  }
   const fingerprint = await imageFileToFingerprint(file).catch(() => null);
   const id = crypto.randomUUID ? crypto.randomUUID() : Date.now() + "-" + Math.random();
   const key = (file.webkitRelativePath || file.name) + "-" + file.size + "-" + file.lastModified;
@@ -1312,6 +1324,10 @@ async function fileToDetectionAsset(file) {
     fingerprint,
     ...result,
   };
+}
+
+function validateDetectionFormat(file) {
+  return /\.png$/i.test(file.name) ? [] : ["注意导出切图格式，NGR只允许png格式，不允许其他格式"];
 }
 
 function validateDetectionDimensions(dimensions, profile) {
