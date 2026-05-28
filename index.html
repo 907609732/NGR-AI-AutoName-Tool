@@ -11,7 +11,7 @@
       <header class="topbar">
         <button class="back-button hidden" id="backButton" type="button" aria-label="返回主界面">←</button>
         <div class="topbar-title">
-          <h1>NGRAI辅助UI切图命名工具 <span class="version-badge">V1.42</span></h1>
+          <h1>NGRAI辅助UI切图命名工具 <span class="version-badge">V1.43</span></h1>
           <p id="pageHint">批量整理 UI 切图名称，让文件名保持统一、清楚、可追踪。</p>
         </div>
         <button class="settings-button" id="rulesEntry" type="button" aria-label="命名规则设置" title="命名规则设置">⚙</button>
@@ -36,7 +36,7 @@
 
         <section class="view rules-view" id="rulesView">
           <div class="section-head">
-            <h2>命名规则 <span class="version-badge">V1.42</span></h2>
+            <h2>命名规则 <span class="version-badge">V1.43</span></h2>
             <p>这些设置会自动保存，并在命名流程中作为全局前缀使用。</p>
           </div>
 
@@ -341,6 +341,7 @@
               <label class="toolbar-select">
                 <span>重复检测</span>
                 <select id="duplicateSensitivitySelect">
+                  <option value="off">关闭</option>
                   <option value="low">低</option>
                   <option value="medium">中</option>
                   <option value="high">高</option>
@@ -375,7 +376,7 @@
             <p>策划配置切图规范：不能有 4 倍图片，宽高都需要是 2 的幂次，例如 32、64、128、256、512、1024。</p>
             <p>图标尺寸检测规范：Icon 只允许正方形，尺寸只允许 32x32、64x64、128x128、256x256、512x512、1024x1024。</p>
             <p>格式规范：NGR 只允许 .png 格式图片；如果上传 JPG、JPEG、WebP、GIF、SVG 等格式，会提示“注意导出切图格式，NGR只允许png格式，不允许其他格式”。</p>
-            <p>重复资源检测：系统会对上传图片生成缩略像素指纹，像素比较接近的资源会标黄提示为疑似重复资源；灵敏度默认低，高档更容易发现相似资源，也更可能出现误报。</p>
+            <p>重复资源检测：默认关闭。开启后系统会对上传图片生成缩略像素指纹，像素比较接近的资源会标黄提示为疑似重复资源；高档更容易发现相似资源，也更可能出现误报。</p>
           </div>
 
           <div class="asset-list detection-list-wrap">
@@ -427,7 +428,8 @@
             <label>
               <span>重复检测灵敏度</span>
               <select id="duplicateSensitivityProfile">
-                <option value="low">低（默认，误报少）</option>
+                <option value="off">关闭（默认）</option>
+                <option value="low">低（误报少）</option>
                 <option value="medium">中</option>
                 <option value="high">高（更敏感）</option>
               </select>

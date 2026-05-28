@@ -1669,11 +1669,12 @@ function updateSimilarResourceWarnings() {
 
 function getDuplicateSensitivityConfig(level) {
   const configs = {
-    low: { threshold: 0.99, dimensionTolerance: 0, minSide: 48, disabled: false },
-    medium: { threshold: 0.965, dimensionTolerance: 0.06, minSide: 32, disabled: false },
-    high: { threshold: 0.92, dimensionTolerance: 0.16, minSide: 0, disabled: false },
+    off: { threshold: 1, dimensionTolerance: 0, minSide: Infinity, disabled: true },
+    low: { threshold: 1, dimensionTolerance: 0, minSide: 96, disabled: false },
+    medium: { threshold: 0.99, dimensionTolerance: 0, minSide: 48, disabled: false },
+    high: { threshold: 0.965, dimensionTolerance: 0.06, minSide: 32, disabled: false },
   };
-  return configs[level] || configs.low;
+  return configs[level] || configs.off;
 }
 
 function shouldCompareDuplicateAssets(left, right, config) {
@@ -3314,7 +3315,8 @@ function getDefaultDetectionProfiles() {
       largeThreshold: 512,
       largeMultiple: 4,
       atlasMultiple: 2,
-      duplicateSensitivity: "low",
+      duplicateSensitivity: "off",
+      duplicateSensitivityMigrated: true,
     },
     {
       id: "more-detection",
@@ -3326,7 +3328,8 @@ function getDefaultDetectionProfiles() {
       largeThreshold: 512,
       largeMultiple: 4,
       atlasMultiple: 2,
-      duplicateSensitivity: "low",
+      duplicateSensitivity: "off",
+      duplicateSensitivityMigrated: true,
     },
   ];
 }
@@ -3343,7 +3346,16 @@ function loadDetectionProfiles() {
 
 function ensureDefaultDetectionProfiles(nextProfiles) {
   const profiles = nextProfiles.map((profile) => {
-    if (profile.id === "ngr-detection" || profile.name === "NGR切图检测规范") return { ...profile, id: "ngr-detection", name: "NGR" };
+    if (profile.id === "ngr-detection" || profile.name === "NGR切图检测规范") {
+      const shouldMigrateDuplicateDefault = !profile.duplicateSensitivityMigrated && (!profile.duplicateSensitivity || profile.duplicateSensitivity === "low");
+      return {
+        ...profile,
+        id: "ngr-detection",
+        name: "NGR",
+        duplicateSensitivity: shouldMigrateDuplicateDefault ? "off" : profile.duplicateSensitivity,
+        duplicateSensitivityMigrated: true,
+      };
+    }
     return profile;
   });
   getDefaultDetectionProfiles().forEach((defaultProfile) => {
@@ -3364,7 +3376,8 @@ function normalizeDetectionProfile(profile = {}) {
     id: profile.id || "detect-" + Date.now() + "-" + Math.random().toString(16).slice(2),
     name: String(profile.name || defaults.name).trim() || defaults.name,
     mode: ["ngr", "planner", "icon"].includes(profile.mode) ? profile.mode : defaults.mode,
-    duplicateSensitivity: ["low", "medium", "high"].includes(profile.duplicateSensitivity) ? profile.duplicateSensitivity : defaults.duplicateSensitivity,
+    duplicateSensitivity: ["off", "low", "medium", "high"].includes(profile.duplicateSensitivity) ? profile.duplicateSensitivity : defaults.duplicateSensitivity,
+    duplicateSensitivityMigrated: profile.duplicateSensitivityMigrated === true,
     maxSide: toPositiveInt(profile.maxSide, defaults.maxSide),
     backgroundWidth: toPositiveInt(profile.backgroundWidth, defaults.backgroundWidth),
     backgroundHeight: toPositiveInt(profile.backgroundHeight, defaults.backgroundHeight),
