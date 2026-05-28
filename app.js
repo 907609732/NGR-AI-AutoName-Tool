@@ -797,16 +797,34 @@ function switchDetectionProfile(profileId) {
 
 async function collectDroppedFiles(dataTransfer) {
   const items = [...(dataTransfer.items || [])];
-  if (!items.length) return [...(dataTransfer.files || [])];
-  const files = await Promise.all(items.map(readDroppedItem));
-  return files.flat().filter(Boolean);
+  const fallbackFiles = [...(dataTransfer.files || [])];
+  if (!items.length) return fallbackFiles;
+  const files = (await Promise.all(items.map(readDroppedItem))).flat().filter(Boolean);
+  return files.length ? files : fallbackFiles;
 }
 
 async function readDroppedItem(item) {
+  if (item.getAsFileSystemHandle) {
+    const handle = await item.getAsFileSystemHandle().catch(() => null);
+    if (handle) return readFileSystemHandleFiles(handle);
+  }
   const entry = item.webkitGetAsEntry?.();
   if (entry) return readEntryFiles(entry);
   const file = item.getAsFile?.();
   return file ? [file] : [];
+}
+
+async function readFileSystemHandleFiles(handle) {
+  if (handle.kind === "file") {
+    const file = await handle.getFile().catch(() => null);
+    return file ? [file] : [];
+  }
+  if (handle.kind !== "directory") return [];
+  const files = [];
+  for await (const child of handle.values()) {
+    files.push(...await readFileSystemHandleFiles(child));
+  }
+  return files;
 }
 
 function readEntryFiles(entry) {
