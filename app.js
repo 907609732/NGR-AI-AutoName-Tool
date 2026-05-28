@@ -1812,7 +1812,7 @@ function renderDetectionList() {
   const visibleAssets = showDetectionProblemOnly
     ? detectionAssets.filter((asset) => asset.hasIssue)
     : showDetectionWarningOnly
-      ? detectionAssets.filter((asset) => asset.hasWarning && !asset.hasIssue)
+      ? detectionAssets.filter((asset) => asset.hasWarning && !asset.hasIssue).sort(compareDetectionWarnings)
       : detectionAssets;
   if (!visibleAssets.length) {
     els.detectionList.className = "asset-list-body empty-state";
@@ -1846,6 +1846,28 @@ function renderDetectionList() {
     row.append(img, meta);
     els.detectionList.appendChild(row);
   });
+}
+
+function compareDetectionWarnings(left, right) {
+  return getDetectionWarningSortKey(left).localeCompare(getDetectionWarningSortKey(right), "zh-Hans-CN", {
+    numeric: true,
+    sensitivity: "base",
+  });
+}
+
+function getDetectionWarningSortKey(asset) {
+  const warningType = getDetectionWarningType(asset);
+  const warningText = (asset.warnings || []).join("；");
+  const width = String(asset.dimensions?.width || 0).padStart(5, "0");
+  const height = String(asset.dimensions?.height || 0).padStart(5, "0");
+  return [warningType, warningText, asset.label || "", width, height, asset.name || ""].join("|");
+}
+
+function getDetectionWarningType(asset) {
+  const warnings = asset.warnings || [];
+  if (warnings.some((message) => message.startsWith("疑似重复资源"))) return "01-疑似重复资源";
+  if (warnings.some((message) => message.includes("2048") || message.includes("推荐切2张"))) return "02-2048不推荐";
+  return "99-其他警告";
 }
 
 function createMetaLine(label, value) {
