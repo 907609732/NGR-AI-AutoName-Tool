@@ -1042,6 +1042,9 @@ button:disabled {
   font-size: 12px;
   font-weight: 650;
   line-height: 1.35;
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
   overflow-wrap: anywhere;
 }
 

@@ -1819,6 +1819,7 @@ function renderAssetList() {
     const resolution = createMetaLine("分辨率", formatResolution(asset.dimensions));
     const sizeCategory = createMetaLine("规格", asset.sizeCategoryLabel || getSizeCategoryLabel(asset.dimensions));
     const dimensionCheck = createMetaLine("分辨率检查", asset.dimensionIssue || asset.dimensionWarning ? asset.dimensionIssueMessage : "通过");
+    dimensionCheck.classList.add("full-line");
     dimensionCheck.classList.toggle("warning-line", asset.dimensionIssue || asset.dimensionWarning);
     const duplicateStatus = getDuplicateStatus(asset);
     const duplicateCheck = createMetaLine("重名检测", duplicateStatus.message);
