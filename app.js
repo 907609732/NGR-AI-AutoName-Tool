@@ -271,6 +271,7 @@ let namingController = null;
 let stopRequested = false;
 let showProblemOnly = false;
 let showDetectionProblemOnly = false;
+let showDetectionWarningOnly = false;
 let toastTimer = null;
 let activeLexiconCategory = "状态";
 let listDisplayMode = loadListDisplayMode();
@@ -368,6 +369,7 @@ const els = {
   detectionRulesToggle: document.querySelector("#detectionRulesToggle"),
   detectionRulesPanel: document.querySelector("#detectionRulesPanel"),
   detectionProblemFilter: document.querySelector("#detectionProblemFilter"),
+  detectionWarningFilter: document.querySelector("#detectionWarningFilter"),
   clearDetectionAssets: document.querySelector("#clearDetectionAssets"),
   detectionCount: document.querySelector("#detectionCount"),
   detectionList: document.querySelector("#detectionList"),
@@ -758,6 +760,7 @@ function bindDetection() {
   els.newDetectionProfile.addEventListener("click", createDetectionProfile);
   els.deleteDetectionProfile.addEventListener("click", deleteDetectionProfile);
   els.detectionProblemFilter.addEventListener("click", toggleDetectionProblemFilter);
+  els.detectionWarningFilter.addEventListener("click", toggleDetectionWarningFilter);
   els.detectionRulesToggle.addEventListener("click", () => {
     const isHidden = els.detectionRulesPanel.classList.toggle("hidden");
     els.detectionRulesToggle.textContent = isHidden ? "查看检测规范" : "收起检测规范";
@@ -1270,9 +1273,23 @@ function toggleProblemFilter() {
 
 function toggleDetectionProblemFilter() {
   showDetectionProblemOnly = !showDetectionProblemOnly;
+  if (showDetectionProblemOnly) showDetectionWarningOnly = false;
+  syncDetectionFilterButtons();
+  renderDetectionList();
+}
+
+function toggleDetectionWarningFilter() {
+  showDetectionWarningOnly = !showDetectionWarningOnly;
+  if (showDetectionWarningOnly) showDetectionProblemOnly = false;
+  syncDetectionFilterButtons();
+  renderDetectionList();
+}
+
+function syncDetectionFilterButtons() {
   els.detectionProblemFilter.textContent = showDetectionProblemOnly ? "显示全部图片" : "只看问题图片";
   els.detectionProblemFilter.setAttribute("aria-pressed", String(showDetectionProblemOnly));
-  renderDetectionList();
+  els.detectionWarningFilter.textContent = showDetectionWarningOnly ? "显示全部图片" : "只看警告图片";
+  els.detectionWarningFilter.setAttribute("aria-pressed", String(showDetectionWarningOnly));
 }
 
 async function addFiles(files) {
@@ -1784,8 +1801,7 @@ function renderDetectionList() {
   const issueCount = detectionAssets.filter((asset) => asset.hasIssue).length;
   const warningCount = detectionAssets.filter((asset) => asset.hasWarning).length;
   els.detectionCount.textContent = detectionAssets.length + " 张" + (issueCount ? " / " + issueCount + " 张问题" : "") + (warningCount ? " / " + warningCount + " 张警告" : "");
-  els.detectionProblemFilter.textContent = showDetectionProblemOnly ? "显示全部图片" : "只看问题图片";
-  els.detectionProblemFilter.setAttribute("aria-pressed", String(showDetectionProblemOnly));
+  syncDetectionFilterButtons();
 
   if (!detectionAssets.length) {
     els.detectionList.className = "asset-list-body empty-state";
@@ -1793,10 +1809,14 @@ function renderDetectionList() {
     return;
   }
 
-  const visibleAssets = showDetectionProblemOnly ? detectionAssets.filter((asset) => asset.hasIssue) : detectionAssets;
+  const visibleAssets = showDetectionProblemOnly
+    ? detectionAssets.filter((asset) => asset.hasIssue)
+    : showDetectionWarningOnly
+      ? detectionAssets.filter((asset) => asset.hasWarning && !asset.hasIssue)
+      : detectionAssets;
   if (!visibleAssets.length) {
     els.detectionList.className = "asset-list-body empty-state";
-    els.detectionList.textContent = "当前没有问题图片";
+    els.detectionList.textContent = showDetectionWarningOnly ? "当前没有警告图片" : "当前没有问题图片";
     return;
   }
 
