@@ -654,10 +654,21 @@ button:disabled {
   background: #fff8f7;
 }
 
+.asset-item.has-warning {
+  border-color: #ead28b;
+  background: #fffaf0;
+}
+
 .asset-item.has-issue:hover,
 .asset-item.has-issue.active {
   border-color: #e9958a;
   background: #fff1ef;
+}
+
+.asset-item.has-warning:hover,
+.asset-item.has-warning.active {
+  border-color: #d6ad45;
+  background: #fff4d6;
 }
 
 .asset-item input {
@@ -1285,6 +1296,11 @@ button:disabled {
 .detection-item.has-issue {
   border-color: #efb7ae;
   background: #fff8f7;
+}
+
+.detection-item.has-warning {
+  border-color: #ead28b;
+  background: #fffaf0;
 }
 
 .detection-item.passed {

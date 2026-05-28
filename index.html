@@ -11,7 +11,7 @@
       <header class="topbar">
         <button class="back-button hidden" id="backButton" type="button" aria-label="返回主界面">←</button>
         <div class="topbar-title">
-          <h1>NGRAI辅助UI切图命名工具 <span class="version-badge">V1.26</span></h1>
+          <h1>NGRAI辅助UI切图命名工具 <span class="version-badge">V1.27</span></h1>
           <p id="pageHint">批量整理 UI 切图名称，让文件名保持统一、清楚、可追踪。</p>
         </div>
         <button class="settings-button" id="rulesEntry" type="button" aria-label="命名规则设置" title="命名规则设置">⚙</button>
@@ -36,7 +36,7 @@
 
         <section class="view rules-view" id="rulesView">
           <div class="section-head">
-            <h2>命名规则 <span class="version-badge">V1.26</span></h2>
+            <h2>命名规则 <span class="version-badge">V1.27</span></h2>
             <p>这些设置会自动保存，并在命名流程中作为全局前缀使用。</p>
           </div>
 
@@ -64,6 +64,17 @@
             <label>
               <span>固定前缀</span>
               <input id="basePrefix" type="text" placeholder="T_UI" />
+            </label>
+            <label>
+              <span>前缀选项</span>
+              <select id="prefixPreset">
+                <option value="">自定义</option>
+                <option value="T_UI">T_UI</option>
+                <option value="T_UI_Img">T_UI_Img</option>
+                <option value="T_UI_Icon">T_UI_Icon</option>
+                <option value="T_UI_Bg">T_UI_Bg</option>
+                <option value="T_UI_Btn">T_UI_Btn</option>
+              </select>
             </label>
             <label>
               <span>工程名</span>
@@ -313,6 +324,14 @@
                 <span>检测项目组</span>
                 <select id="detectionProfileSelect"></select>
               </label>
+              <label class="toolbar-select">
+                <span>检测模式</span>
+                <select id="detectionModeSelect">
+                  <option value="ngr">NGR切图规范</option>
+                  <option value="planner">策划配置切图规范</option>
+                  <option value="icon">图标尺寸检测规范</option>
+                </select>
+              </label>
             </div>
           </div>
 
@@ -371,6 +390,14 @@
             <label>
               <span>项目组名称</span>
               <input id="detectionProfileName" type="text" placeholder="例如：NGR检测规范" />
+            </label>
+            <label>
+              <span>检测模式</span>
+              <select id="detectionProfileMode">
+                <option value="ngr">NGR切图规范</option>
+                <option value="planner">策划配置切图规范</option>
+                <option value="icon">图标尺寸检测规范</option>
+              </select>
             </label>
             <label>
               <span>单边上限</span>

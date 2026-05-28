@@ -12,12 +12,12 @@ const NGR_TRAINING_VERSION = 6;
 const YYSLS_TRAINING_VERSION = 1;
 const FORBIDDEN_NAMING_TERMS = ["module", "modules"];
 const lexiconCategories = [
-  { title: "状态", terms: ["Normal", "Hover", "Pressed", "Disabled", "Selected", "Unselected", "Active", "Lock", "Unlock"] },
-  { title: "类型", terms: ["BG", "Button", "Icon", "Line", "Frame", "Mask", "Card", "Tab", "Panel", "Item"] },
-  { title: "装饰", terms: ["Light", "Shadow", "Pattern", "Ornament", "Deco", "Glow", "Spark", "Ribbon"] },
-  { title: "内容", terms: ["Illustration", "Character", "Weapon", "Rewards", "Gift", "Badge", "Logo", "Avatar"] },
-  { title: "方向", terms: ["Left", "Right", "Top", "Bottom", "Center", "Front", "Back", "Corner"] },
-  { title: "颜色", terms: ["Red", "Blue", "Yellow", "Green", "Black", "White", "Gold", "Purple"] },
+  { title: "状态", terms: ["Normal", "Nml", "Hover", "Pressed", "Down", "Active", "Selected", "Sel", "Unselected", "Disabled", "Forbidden", "Lock", "Unlock", "Open", "Close", "On", "Off"] },
+  { title: "类型", terms: ["BG", "Button", "Btn", "Icon", "Line", "Bar", "ProgressBar", "Frame", "Mask", "Card", "Tab", "Panel", "Item", "Title", "Text", "Number"] },
+  { title: "装饰", terms: ["Light", "Shadow", "Pattern", "Ornament", "Deco", "Glow", "Spark", "Ribbon", "Border", "Corner", "Circle", "Bubble", "Point", "Arrow"] },
+  { title: "内容", terms: ["Illustration", "Character", "Weapon", "Rewards", "Gift", "Badge", "Logo", "Avatar", "Shop", "Task", "Map", "Skill", "Rank", "Record", "Journal"] },
+  { title: "方向", terms: ["Left", "Right", "Top", "Bottom", "Center", "Middle", "Front", "Back", "Corner", "TopLeft", "TopRight", "BottomLeft", "BottomRight"] },
+  { title: "颜色", terms: ["Red", "Blue", "Yellow", "Green", "Black", "White", "Gold", "Purple", "Orange", "Gray", "Dark", "Light"] },
 ];
 
 const defaultRules = {
@@ -25,9 +25,9 @@ const defaultRules = {
   basePrefix: "T_UI",
   projectName: "工程名",
   separator: "_",
-  tags: "BG, Button, Hover, Normal, Icon, Item",
+  tags: "BG, Button, Hover, Normal, Icon, Item, Frame, Mask, Panel, Title, Line, ProgressBar, Selected, Disabled",
   pageTerms: "Home\nLogin\nProfile\nSettings",
-  componentTerms: "BG\nButton\nIcon\nBanner\nNav\nItem",
+  componentTerms: "BG\nButton\nBtn\nIcon\nBanner\nNav\nItem\nFrame\nMask\nPanel\nCard\nLine\nBar\nProgressBar\nTitle\nText\nNumber\nArrow\nPoint\nBadge\nLogo\nAvatar\nRewards",
   stateTerms: "Normal\nHover\nActive\nDisabled",
   filenameRules: "首页=Home\n主页=Home\n登录=Login\n登陆=Login\n个人中心=Profile\n我的=Profile\n设置=Settings\n背景=BG\n底图=BG\n底=BG\n背景图=BG\n按钮=Button\n图标=Icon\n导航=Nav\n横幅=Banner\n模块=Item\n奖励=Rewards\n常态=Normal\n默认=Normal\n悬浮=Hover\n选中=Active\n点击=Active\n禁用=Disabled\n不可用=Disabled\nbg=BG\nbackground=BG\nBackground=BG\nReward=Rewards\nRewards=Rewards\nbtn=Button\nbutton=Button\nicon=Icon\nhover=Hover\nactive=Active\ndisabled=Disabled\nhome=Home\nlogin=Login\nuser=Profile",
   contextDocs: "",
@@ -296,6 +296,7 @@ const els = {
   workSchemeSelect: document.querySelector("#workSchemeSelect"),
   schemeName: document.querySelector("#schemeName"),
   basePrefix: document.querySelector("#basePrefix"),
+  prefixPreset: document.querySelector("#prefixPreset"),
   projectName: document.querySelector("#projectName"),
   workProjectName: document.querySelector("#workProjectName"),
   separator: document.querySelector("#separator"),
@@ -344,9 +345,11 @@ const els = {
   problemFilter: document.querySelector("#problemFilter"),
   removeSelected: document.querySelector("#removeSelected"),
   detectionProfileSelect: document.querySelector("#detectionProfileSelect"),
+  detectionModeSelect: document.querySelector("#detectionModeSelect"),
   detectionSettingsEntry: document.querySelector("#detectionSettingsEntry"),
   detectionSettingsProfileSelect: document.querySelector("#detectionSettingsProfileSelect"),
   detectionProfileName: document.querySelector("#detectionProfileName"),
+  detectionProfileMode: document.querySelector("#detectionProfileMode"),
   detectionMaxSide: document.querySelector("#detectionMaxSide"),
   detectionBgWidth: document.querySelector("#detectionBgWidth"),
   detectionBgHeight: document.querySelector("#detectionBgHeight"),
@@ -451,6 +454,16 @@ function bindRules() {
 
   els.workSchemeSelect.addEventListener("change", () => {
     switchScheme(els.workSchemeSelect.value);
+  });
+
+  els.prefixPreset.addEventListener("change", () => {
+    if (!els.prefixPreset.value) return;
+    els.basePrefix.value = els.prefixPreset.value;
+    rules = collectRulesForm();
+    saveRules(rules);
+    updateRulePreview();
+    updateActiveRuleText();
+    renderAssetList();
   });
 
   els.workProjectName.addEventListener("input", () => {
@@ -715,10 +728,16 @@ function bindDetection() {
   els.detectionProfileSelect.addEventListener("change", () => {
     switchDetectionProfile(els.detectionProfileSelect.value);
   });
+  els.detectionModeSelect.addEventListener("change", () => {
+    updateActiveDetectionProfile({ ...getActiveDetectionProfile(), mode: els.detectionModeSelect.value }, true);
+    fillDetectionProfileForm();
+    revalidateDetectionAssets();
+    showToast("检测模式已切换");
+  });
   els.detectionSettingsProfileSelect.addEventListener("change", () => {
     switchDetectionProfile(els.detectionSettingsProfileSelect.value);
   });
-  [els.detectionProfileName, els.detectionMaxSide, els.detectionBgWidth, els.detectionBgHeight, els.detectionLargeThreshold, els.detectionLargeMultiple, els.detectionAtlasMultiple].forEach((input) => {
+  [els.detectionProfileName, els.detectionProfileMode, els.detectionMaxSide, els.detectionBgWidth, els.detectionBgHeight, els.detectionLargeThreshold, els.detectionLargeMultiple, els.detectionAtlasMultiple].forEach((input) => {
     input.addEventListener("input", () => {
       updateActiveDetectionProfile(collectDetectionProfileForm(), false);
       revalidateDetectionAssets();
@@ -1236,6 +1255,7 @@ async function addDetectionFiles(files) {
     loadedCount += 1;
     if (asset.hasIssue) issueCount += 1;
   });
+  updateSimilarResourceWarnings();
   renderDetectionList();
   showToast(issueCount ? "已检测 " + loadedCount + " 张，其中 " + issueCount + " 张有问题" : "已检测 " + loadedCount + " 张，全部通过");
 }
@@ -1263,6 +1283,7 @@ async function fileToAsset(file) {
     sizeCategory: validation.category,
     sizeCategoryLabel: validation.label,
     dimensionIssue: Boolean(validation.problem),
+    dimensionWarning: Boolean(validation.warning),
     dimensionIssueMessage: validation.reason || "",
     checked: false,
     recommendations: [],
@@ -1278,6 +1299,7 @@ async function fileToDetectionAsset(file) {
   const url = URL.createObjectURL(file);
   const dimensions = await readImageDimensions(url).catch(() => ({ width: 0, height: 0 }));
   const result = validateDetectionDimensions(dimensions, getActiveDetectionProfile());
+  const fingerprint = await imageFileToFingerprint(file).catch(() => null);
   const id = crypto.randomUUID ? crypto.randomUUID() : Date.now() + "-" + Math.random();
   const key = (file.webkitRelativePath || file.name) + "-" + file.size + "-" + file.lastModified;
   return {
@@ -1287,6 +1309,7 @@ async function fileToDetectionAsset(file) {
     url,
     name: file.webkitRelativePath || file.name,
     dimensions,
+    fingerprint,
     ...result,
   };
 }
@@ -1299,13 +1322,18 @@ function validateDetectionDimensions(dimensions, profile) {
   const config = normalizeDetectionProfile(profile);
   const maxSide = Math.max(width, height);
   const messages = [];
+  const warnings = [];
+  if (config.mode === "planner") return validatePlannerDetectionDimensions(width, height);
+  if (config.mode === "icon") return validateIconDetectionDimensions(width, height);
   const isBackground = width === config.backgroundWidth && height === config.backgroundHeight;
   let label = isBackground ? "背景图" : maxSide > config.largeThreshold ? "大图" : "图集";
 
   if (width % 2 !== 0 || height % 2 !== 0) {
     messages.push("分辨率不是双数，不允许单数");
   }
-  if (maxSide > config.maxSide && !isBackground) {
+  if (maxSide === 2048 && !isBackground) {
+    warnings.push("该分辨率允许上传，但是不推荐使用，推荐切2张分辨率1024拼接");
+  } else if (maxSide > config.maxSide && !isBackground) {
     messages.push("分辨率单边不能超过" + config.maxSide);
   }
   if (isBackground) {
@@ -1321,8 +1349,38 @@ function validateDetectionDimensions(dimensions, profile) {
 
   return {
     hasIssue: messages.length > 0,
+    hasWarning: warnings.length > 0,
     label,
+    warnings,
     messages,
+  };
+}
+
+function validatePlannerDetectionDimensions(width, height) {
+  const messages = [];
+  const warnings = [];
+  if (width % 2 !== 0 || height % 2 !== 0) messages.push("分辨率不是双数，不允许单数");
+  if (!isPowerOfTwo(width) || !isPowerOfTwo(height)) messages.push("策划配置切图规范：宽高都需要是2的幂次");
+  return {
+    hasIssue: messages.length > 0,
+    hasWarning: warnings.length > 0,
+    label: "策划配置",
+    messages,
+    warnings,
+  };
+}
+
+function validateIconDetectionDimensions(width, height) {
+  const allowedSizes = [32, 64, 128, 256, 512, 1024];
+  const messages = [];
+  if (width !== height) messages.push("Icon尺寸只允许正方形");
+  if (!allowedSizes.includes(width) || !allowedSizes.includes(height)) messages.push("Icon尺寸只允许32x32、64x64、128x128、256x256、512x512、1024x1024");
+  return {
+    hasIssue: messages.length > 0,
+    hasWarning: false,
+    label: "Icon",
+    messages,
+    warnings: [],
   };
 }
 
@@ -1336,6 +1394,7 @@ function validateUploadDimensions(dimensions) {
     return { valid: true, problem: true, category: "invalid", label: "问题图片", reason: "分辨率宽高不能是单数" };
   }
   if (maxDimension > 1024 && !isBackgroundSize) {
+    if (maxDimension === 2048) return { valid: true, warning: true, category: "large", label: "大图", reason: "该分辨率允许上传，但是不推荐使用，推荐切2张分辨率1024拼接" };
     return { valid: true, problem: true, category: "invalid", label: "问题图片", reason: "除 3440x1440 背景图外，1024 以上分辨率有问题" };
   }
   if (maxDimension >= 512) {
@@ -1359,6 +1418,68 @@ function readImageDimensions(url) {
   });
 }
 
+async function imageFileToFingerprint(file) {
+  if (!isRasterImage(file)) return null;
+  const url = URL.createObjectURL(file);
+  try {
+    const image = await loadImage(url);
+    const size = 12;
+    const canvas = document.createElement("canvas");
+    canvas.width = size;
+    canvas.height = size;
+    const context = canvas.getContext("2d", { willReadFrequently: true });
+    context.drawImage(image, 0, 0, size, size);
+    const data = context.getImageData(0, 0, size, size).data;
+    const values = [];
+    for (let index = 0; index < data.length; index += 4) {
+      values.push(Math.round((data[index] + data[index + 1] + data[index + 2]) / 3));
+    }
+    const average = values.reduce((sum, value) => sum + value, 0) / values.length;
+    return values.map((value) => (value >= average ? "1" : "0")).join("");
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
+function updateSimilarResourceWarnings() {
+  detectionAssets.forEach((asset) => {
+    asset.similarNames = [];
+  });
+  for (let index = 0; index < detectionAssets.length; index += 1) {
+    const current = detectionAssets[index];
+    if (!current.fingerprint) continue;
+    for (let nextIndex = index + 1; nextIndex < detectionAssets.length; nextIndex += 1) {
+      const next = detectionAssets[nextIndex];
+      if (!next.fingerprint) continue;
+      const similarity = getFingerprintSimilarity(current.fingerprint, next.fingerprint);
+      if (similarity >= 0.92) {
+        current.similarNames.push(next.name);
+        next.similarNames.push(current.name);
+      }
+    }
+  }
+  detectionAssets.forEach((asset) => {
+    const baseWarnings = (asset.warnings || []).filter((message) => !message.startsWith("疑似重复资源"));
+    const similarWarnings = (asset.similarNames || []).slice(0, 3).map((name) => "疑似重复资源：" + name);
+    asset.warnings = [...baseWarnings, ...similarWarnings];
+    asset.hasWarning = Boolean(asset.warnings.length);
+  });
+}
+
+function getFingerprintSimilarity(left, right) {
+  const length = Math.min(left.length, right.length);
+  if (!length) return 0;
+  let same = 0;
+  for (let index = 0; index < length; index += 1) {
+    if (left[index] === right[index]) same += 1;
+  }
+  return same / length;
+}
+
+function isPowerOfTwo(value) {
+  return Number.isInteger(value) && value > 0 && (value & (value - 1)) === 0;
+}
+
 function renderAssetList() {
   const problemCount = assets.filter((asset) => asset.dimensionIssue).length;
   els.fileCount.textContent = assets.length + " 张" + (problemCount ? " / " + problemCount + " 张问题" : "");
@@ -1378,7 +1499,7 @@ function renderAssetList() {
   els.assetList.innerHTML = "";
   visibleAssets.forEach((asset) => {
     const row = document.createElement("div");
-    row.className = "asset-item" + (asset.dimensionIssue ? " has-issue" : "") + (asset.id === selectedId ? " active" : "");
+    row.className = "asset-item" + (asset.dimensionIssue ? " has-issue" : asset.dimensionWarning ? " has-warning" : "") + (asset.id === selectedId ? " active" : "");
     row.addEventListener("click", () => {
       selectedId = asset.id;
       renderAssetList();
@@ -1405,7 +1526,8 @@ function renderAssetList() {
     afterName.classList.add("full-line", "after-name-line");
     const resolution = createMetaLine("分辨率", formatResolution(asset.dimensions));
     const sizeCategory = createMetaLine("规格", asset.sizeCategoryLabel || getSizeCategoryLabel(asset.dimensions));
-    const dimensionCheck = createMetaLine("分辨率检查", asset.dimensionIssue ? asset.dimensionIssueMessage : "通过");
+    const dimensionCheck = createMetaLine("分辨率检查", asset.dimensionIssue || asset.dimensionWarning ? asset.dimensionIssueMessage : "通过");
+    dimensionCheck.classList.toggle("warning-line", asset.dimensionIssue || asset.dimensionWarning);
     const duplicateStatus = getDuplicateStatus(asset);
     const duplicateCheck = createMetaLine("重名检测", duplicateStatus.message);
     duplicateCheck.classList.toggle("warning-line", duplicateStatus.hasIssue);
@@ -1585,7 +1707,8 @@ function getVisibleAssets() {
 
 function renderDetectionList() {
   const issueCount = detectionAssets.filter((asset) => asset.hasIssue).length;
-  els.detectionCount.textContent = detectionAssets.length + " 张" + (issueCount ? " / " + issueCount + " 张问题" : "");
+  const warningCount = detectionAssets.filter((asset) => asset.hasWarning).length;
+  els.detectionCount.textContent = detectionAssets.length + " 张" + (issueCount ? " / " + issueCount + " 张问题" : "") + (warningCount ? " / " + warningCount + " 张警告" : "");
   els.detectionProblemFilter.textContent = showDetectionProblemOnly ? "显示全部图片" : "只看问题图片";
   els.detectionProblemFilter.setAttribute("aria-pressed", String(showDetectionProblemOnly));
 
@@ -1606,7 +1729,7 @@ function renderDetectionList() {
   els.detectionList.innerHTML = "";
   visibleAssets.forEach((asset) => {
     const row = document.createElement("div");
-    row.className = "asset-item detection-item" + (asset.hasIssue ? " has-issue" : " passed");
+    row.className = "asset-item detection-item" + (asset.hasIssue ? " has-issue" : asset.hasWarning ? " has-warning" : " passed");
 
     const img = document.createElement("img");
     img.src = asset.url;
@@ -1615,13 +1738,13 @@ function renderDetectionList() {
     const meta = document.createElement("div");
     meta.className = "asset-meta";
     const status = document.createElement("span");
-    status.className = "status-badge " + (asset.hasIssue ? "status-failed" : "status-done");
-    status.textContent = asset.hasIssue ? "有问题" : "通过";
+    status.className = "status-badge " + (asset.hasIssue ? "status-failed" : asset.hasWarning ? "status-running" : "status-done");
+    status.textContent = asset.hasIssue ? "有问题" : asset.hasWarning ? "警告" : "通过";
     meta.append(
       createMetaLine("文件名称", asset.name),
       createMetaLine("分辨率", formatResolution(asset.dimensions)),
       createMetaLine("规格标注", asset.label),
-      createMetaLine("检测结果", asset.hasIssue ? asset.messages.join("；") : "通过"),
+      createMetaLine("检测结果", asset.hasIssue ? asset.messages.join("；") : asset.hasWarning ? asset.warnings.join("；") : "通过"),
       status
     );
 
@@ -2238,6 +2361,7 @@ function fillRulesForm() {
   els.projectConfigDescription.value = project.description || "";
   els.schemeName.value = rules.schemeName;
   els.basePrefix.value = rules.basePrefix;
+  els.prefixPreset.value = getPrefixPresetValue(rules.basePrefix);
   els.projectName.value = rules.projectName;
   els.workProjectName.value = rules.projectName;
   els.separator.value = rules.separator;
@@ -2542,11 +2666,13 @@ function renderDetectionProfileSelect() {
   });
   els.detectionProfileSelect.value = activeDetectionProfileId;
   els.detectionSettingsProfileSelect.value = activeDetectionProfileId;
+  els.detectionModeSelect.value = getActiveDetectionProfile().mode;
 }
 
 function fillDetectionProfileForm() {
   const profile = getActiveDetectionProfile();
   els.detectionProfileName.value = profile.name;
+  els.detectionProfileMode.value = profile.mode;
   els.detectionMaxSide.value = profile.maxSide;
   els.detectionBgWidth.value = profile.backgroundWidth;
   els.detectionBgHeight.value = profile.backgroundHeight;
@@ -2560,6 +2686,7 @@ function collectDetectionProfileForm() {
   return normalizeDetectionProfile({
     ...current,
     name: els.detectionProfileName.value,
+    mode: els.detectionProfileMode.value,
     maxSide: els.detectionMaxSide.value,
     backgroundWidth: els.detectionBgWidth.value,
     backgroundHeight: els.detectionBgHeight.value,
@@ -2614,6 +2741,7 @@ function revalidateDetectionAssets() {
     ...asset,
     ...validateDetectionDimensions(asset.dimensions, profile),
   }));
+  updateSimilarResourceWarnings();
   renderDetectionList();
 }
 
@@ -2636,6 +2764,11 @@ function updateRulePreview() {
 
 function updateActiveRuleText() {
   els.activeRuleText.textContent = "当前规则：" + buildPrefix();
+}
+
+function getPrefixPresetValue(prefix) {
+  const presets = ["T_UI", "T_UI_Img", "T_UI_Icon", "T_UI_Bg", "T_UI_Btn"];
+  return presets.includes(prefix) ? prefix : "";
 }
 
 function parseTags(value) {
@@ -2749,6 +2882,7 @@ function getDefaultDetectionProfiles() {
     {
       id: "ngr-detection",
       name: "NGR切图检测规范",
+      mode: "ngr",
       maxSide: 1024,
       backgroundWidth: 3440,
       backgroundHeight: 1440,
@@ -2759,6 +2893,7 @@ function getDefaultDetectionProfiles() {
     {
       id: "common-detection",
       name: "通用切图检测规范",
+      mode: "ngr",
       maxSide: 1024,
       backgroundWidth: 3440,
       backgroundHeight: 1440,
@@ -2790,6 +2925,7 @@ function normalizeDetectionProfile(profile = {}) {
   return {
     id: profile.id || "detect-" + Date.now() + "-" + Math.random().toString(16).slice(2),
     name: String(profile.name || defaults.name).trim() || defaults.name,
+    mode: ["ngr", "planner", "icon"].includes(profile.mode) ? profile.mode : defaults.mode,
     maxSide: toPositiveInt(profile.maxSide, defaults.maxSide),
     backgroundWidth: toPositiveInt(profile.backgroundWidth, defaults.backgroundWidth),
     backgroundHeight: toPositiveInt(profile.backgroundHeight, defaults.backgroundHeight),
