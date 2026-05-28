@@ -315,6 +315,8 @@ const els = {
   saveAiSettings: document.querySelector("#saveAiSettings"),
   useTempAiSettings: document.querySelector("#useTempAiSettings"),
   testAiSettings: document.querySelector("#testAiSettings"),
+  exportAiSettings: document.querySelector("#exportAiSettings"),
+  importAiSettings: document.querySelector("#importAiSettings"),
   exportSchemeTemplate: document.querySelector("#exportSchemeTemplate"),
   importSchemeTemplate: document.querySelector("#importSchemeTemplate"),
   prefixPreview: document.querySelector("#prefixPreview"),
@@ -547,6 +549,9 @@ function bindRules() {
   els.useTempAiSettings.addEventListener("click", useTempAiSettings);
 
   els.testAiSettings.addEventListener("click", testAiSettings);
+
+  els.exportAiSettings.addEventListener("click", exportAiSettings);
+  els.importAiSettings.addEventListener("change", importAiSettings);
 
   els.exportSchemeTemplate.addEventListener("click", exportSchemeTemplate);
   els.importSchemeTemplate.addEventListener("change", importSchemeTemplate);
@@ -1088,6 +1093,41 @@ async function testAiSettings() {
   } finally {
     els.testAiSettings.disabled = false;
     els.testAiSettings.textContent = "测试 API";
+  }
+}
+
+function exportAiSettings() {
+  aiSettings = collectAiSettings();
+  saveAiSettings(aiSettings);
+  const payload = {
+    type: "NGR_AI_API_CONFIG",
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    settings: aiSettings,
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = "ngr-ai-api-config.json";
+  link.click();
+  URL.revokeObjectURL(url);
+  showToast("API 配置已导出，请妥善保管文件中的 API Key");
+}
+
+async function importAiSettings(event) {
+  const file = event.target.files?.[0];
+  event.target.value = "";
+  if (!file) return;
+  try {
+    const payload = JSON.parse(await file.text());
+    const importedSettings = payload.settings || payload;
+    aiSettings = normalizeAiSettings(importedSettings);
+    saveAiSettings(aiSettings);
+    fillAiSettings();
+    showToast("API 配置已导入并保存");
+  } catch {
+    showToast("API 配置导入失败，请确认文件是 JSON 配置");
   }
 }
 
