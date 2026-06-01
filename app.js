@@ -25,6 +25,7 @@ const defaultRules = {
   schemeName: "默认方案",
   basePrefix: "T_UI",
   projectName: "工程名",
+  viewName: "",
   separator: "_",
   tags: "BG, Button, Hover, Normal, Icon, Item, Frame, Mask, Panel, Title, Line, ProgressBar, Selected, Disabled",
   pageTerms: "Home\nLogin\nProfile\nSettings",
@@ -301,7 +302,9 @@ const els = {
   basePrefix: document.querySelector("#basePrefix"),
   prefixPreset: document.querySelector("#prefixPreset"),
   projectName: document.querySelector("#projectName"),
+  workBasePrefix: document.querySelector("#workBasePrefix"),
   workProjectName: document.querySelector("#workProjectName"),
+  workViewName: document.querySelector("#workViewName"),
   separator: document.querySelector("#separator"),
   tags: document.querySelector("#tags"),
   pageTerms: document.querySelector("#pageTerms"),
@@ -345,9 +348,11 @@ const els = {
   stopNaming: document.querySelector("#stopNaming"),
   exportFiles: document.querySelector("#exportFiles"),
   batchSuffix: document.querySelector("#batchSuffix"),
+  batchSequenceStart: document.querySelector("#batchSequenceStart"),
   listDisplayMode: document.querySelector("#listDisplayMode"),
   listSortMode: document.querySelector("#listSortMode"),
   applySuffix: document.querySelector("#applySuffix"),
+  applySequence: document.querySelector("#applySequence"),
   problemFilter: document.querySelector("#problemFilter"),
   removeSelected: document.querySelector("#removeSelected"),
   detectionProfileSelect: document.querySelector("#detectionProfileSelect"),
@@ -480,7 +485,18 @@ function bindRules() {
   els.prefixPreset.addEventListener("change", () => {
     if (!els.prefixPreset.value) return;
     els.basePrefix.value = els.prefixPreset.value;
+    els.workBasePrefix.value = els.prefixPreset.value;
     rules = collectRulesForm();
+    saveRules(rules);
+    updateRulePreview();
+    updateActiveRuleText();
+    renderAssetList();
+  });
+
+  els.workBasePrefix.addEventListener("change", () => {
+    rules.basePrefix = els.workBasePrefix.value || defaultRules.basePrefix;
+    els.basePrefix.value = rules.basePrefix;
+    els.prefixPreset.value = getPrefixPresetValue(rules.basePrefix);
     saveRules(rules);
     updateRulePreview();
     updateActiveRuleText();
@@ -490,6 +506,14 @@ function bindRules() {
   els.workProjectName.addEventListener("input", () => {
     rules.projectName = sanitizeName(els.workProjectName.value) || defaultRules.projectName;
     els.projectName.value = rules.projectName;
+    saveRules(rules);
+    updateRulePreview();
+    updateActiveRuleText();
+    renderAssetList();
+  });
+
+  els.workViewName.addEventListener("input", () => {
+    rules.viewName = sanitizeName(els.workViewName.value);
     saveRules(rules);
     updateRulePreview();
     updateActiveRuleText();
@@ -938,6 +962,7 @@ function bindEditor() {
   els.runLocalNaming.addEventListener("click", runLocalNaming);
   els.stopNaming.addEventListener("click", stopNaming);
   els.applySuffix.addEventListener("click", applyBatchSuffix);
+  els.applySequence.addEventListener("click", applyBatchSequence);
   els.problemFilter.addEventListener("click", toggleProblemFilter);
   els.removeSelected.addEventListener("click", removeSelectedAssets);
   els.exportFiles.addEventListener("click", exportRenamedFiles);
@@ -1354,6 +1379,22 @@ function applyBatchSuffix() {
   showToast("已更新 " + targets.length + " 张图片");
 }
 
+function applyBatchSequence() {
+  const start = Number.parseInt(els.batchSequenceStart.value || "1", 10);
+  if (!Number.isFinite(start) || start < 1) {
+    showToast("请先输入有效的起始序号");
+    return;
+  }
+  const selected = assets.filter((asset) => asset.checked);
+  const targets = selected.length ? selected : getVisibleAssets();
+  targets.forEach((asset, index) => {
+    const base = asset.finalBaseName || makeRecommendations(asset)[0];
+    asset.finalBaseName = appendPart(removeTrailingSequence(base), formatSequenceNumber(start + index));
+  });
+  renderAssetList();
+  showToast("已给 " + targets.length + " 张图片添加序号");
+}
+
 function removeSelectedAssets() {
   const targetIds = assets.filter((asset) => asset.checked || asset.id === selectedId).map((asset) => asset.id);
   if (!targetIds.length) return;
@@ -1471,6 +1512,8 @@ async function fileToAsset(file) {
     recommendations: [],
     finalBaseName: "",
     customPrefix: "",
+    customBasePrefix: "",
+    customProjectName: "",
     lexiconOpen: false,
     namingStatus: "idle",
     statusMessage: "",
@@ -1871,16 +1914,36 @@ function renderAssetList() {
     const prefix = document.createElement("label");
     prefix.className = "inline-prefix";
     const prefixLabel = document.createElement("span");
-    prefixLabel.textContent = "单张前缀";
-    const prefixInput = document.createElement("input");
-    prefixInput.type = "text";
-    prefixInput.value = buildAssetPrefix(asset);
-    prefixInput.placeholder = buildPrefix();
-    prefixInput.addEventListener("input", () => {
-      asset.customPrefix = sanitizePrefix(prefixInput.value);
+    prefixLabel.textContent = "前缀名";
+    const prefixInput = document.createElement("select");
+    ["T_UI", "T_UI_Img", "T_UI_Icon"].forEach((value) => {
+      const option = document.createElement("option");
+      option.value = value;
+      option.textContent = value;
+      option.selected = value === buildAssetBasePrefix(asset);
+      prefixInput.appendChild(option);
+    });
+    prefixInput.addEventListener("change", () => {
+      asset.customPrefix = "";
+      asset.customBasePrefix = prefixInput.value;
       afterName.querySelector("strong").textContent = asset.finalBaseName ? buildExportName(asset) : "待命名";
     });
     prefix.append(prefixLabel, prefixInput);
+
+    const project = document.createElement("label");
+    project.className = "inline-prefix";
+    const projectLabel = document.createElement("span");
+    projectLabel.textContent = "工程名";
+    const projectInput = document.createElement("input");
+    projectInput.type = "text";
+    projectInput.value = buildAssetProjectName(asset);
+    projectInput.placeholder = rules.projectName;
+    projectInput.addEventListener("input", () => {
+      asset.customPrefix = "";
+      asset.customProjectName = sanitizeName(projectInput.value);
+      afterName.querySelector("strong").textContent = asset.finalBaseName ? buildExportName(asset) : "待命名";
+    });
+    project.append(projectLabel, projectInput);
 
     const recommendationWrap = document.createElement("div");
     recommendationWrap.className = "inline-recommendations";
@@ -1986,7 +2049,7 @@ function renderAssetList() {
     lexiconContent.append(tabs, chips);
     lexiconWrap.append(lexiconSummary, lexiconContent);
 
-    nameRow.append(prefix, finalLabel);
+    nameRow.append(prefix, project, finalLabel);
     editor.append(nameRow);
     if (listDisplayMode !== "compact") editor.append(recommendationWrap, lexiconWrap);
     row.append(checkbox, img, text, editor);
@@ -2670,6 +2733,14 @@ function appendPart(base, part) {
   return cleanBase + "_" + cleanPart;
 }
 
+function removeTrailingSequence(base) {
+  return formatNamingName(base).replace(/_\d{2,4}$/, "");
+}
+
+function formatSequenceNumber(value) {
+  return String(value).padStart(2, "0");
+}
+
 async function exportRenamedFiles() {
   if (!assets.length) {
     showToast("没有可导出的图片");
@@ -2713,7 +2784,24 @@ function buildExportName(asset) {
 }
 
 function buildAssetPrefix(asset) {
-  return sanitizePrefix(asset?.customPrefix) || buildPrefix();
+  const legacyPrefix = sanitizePrefix(asset?.customPrefix);
+  if (legacyPrefix) return legacyPrefix.endsWith("_") ? legacyPrefix : legacyPrefix + "_";
+  const separator = rules.separator || "_";
+  const parts = [
+    buildAssetBasePrefix(asset),
+    buildAssetProjectName(asset),
+    sanitizeName(rules.viewName),
+  ].filter(Boolean);
+  return parts.join(separator) + separator;
+}
+
+function buildAssetBasePrefix(asset) {
+  const prefix = sanitizeName(asset?.customBasePrefix || rules.basePrefix || defaultRules.basePrefix);
+  return ["T_UI", "T_UI_Img", "T_UI_Icon"].includes(prefix) ? prefix : defaultRules.basePrefix;
+}
+
+function buildAssetProjectName(asset) {
+  return sanitizeName(asset?.customProjectName || rules.projectName) || defaultRules.projectName;
 }
 
 function getExtension(name) {
@@ -2724,8 +2812,9 @@ function getExtension(name) {
 function collectRulesForm() {
   return {
     schemeName: els.schemeName.value.trim() || defaultRules.schemeName,
-    basePrefix: sanitizeName(els.basePrefix.value) || defaultRules.basePrefix,
+    basePrefix: sanitizeName(els.workBasePrefix.value || els.basePrefix.value) || defaultRules.basePrefix,
     projectName: sanitizeName(els.workProjectName.value || els.projectName.value) || defaultRules.projectName,
+    viewName: sanitizeName(els.workViewName.value),
     separator: els.separator.value || defaultRules.separator,
     tags: els.tags.value.trim() || defaultRules.tags,
     pageTerms: els.pageTerms.value.trim() || defaultRules.pageTerms,
@@ -2742,9 +2831,11 @@ function fillRulesForm() {
   els.projectConfigDescription.value = project.description || "";
   els.schemeName.value = rules.schemeName;
   els.basePrefix.value = rules.basePrefix;
+  els.workBasePrefix.value = getPrefixPresetValue(rules.basePrefix) || defaultRules.basePrefix;
   els.prefixPreset.value = getPrefixPresetValue(rules.basePrefix);
   els.projectName.value = rules.projectName;
   els.workProjectName.value = rules.projectName;
+  els.workViewName.value = rules.viewName || "";
   els.separator.value = rules.separator;
   els.tags.value = rules.tags;
   els.pageTerms.value = rules.pageTerms;
@@ -3134,12 +3225,14 @@ function syncWorkProjectFields() {
   if (els.projectSelect.value !== activeProjectId) els.projectSelect.value = activeProjectId;
   els.projectConfigName.value = project.name;
   els.projectConfigDescription.value = project.description || "";
+  els.workBasePrefix.value = getPrefixPresetValue(rules.basePrefix) || defaultRules.basePrefix;
   els.workProjectName.value = rules.projectName;
+  els.workViewName.value = rules.viewName || "";
 }
 
 function buildPrefix() {
   const separator = rules.separator || "_";
-  return [sanitizeName(rules.basePrefix), sanitizeName(rules.projectName), ""].join(separator);
+  return [sanitizeName(rules.basePrefix), sanitizeName(rules.projectName), sanitizeName(rules.viewName), ""].filter((part, index, array) => part || index === array.length - 1).join(separator);
 }
 
 function updateRulePreview() {

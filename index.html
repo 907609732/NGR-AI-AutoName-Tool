@@ -11,7 +11,7 @@
       <header class="topbar">
         <button class="back-button hidden" id="backButton" type="button" aria-label="返回主界面">←</button>
         <div class="topbar-title">
-          <h1>NGRAI辅助UI切图命名工具 <span class="version-badge">V1.43</span></h1>
+          <h1>NGRAI辅助UI切图命名工具 <span class="version-badge">V1.44</span></h1>
           <p id="pageHint">批量整理 UI 切图名称，让文件名保持统一、清楚、可追踪。</p>
         </div>
         <button class="settings-button" id="rulesEntry" type="button" aria-label="命名规则设置" title="命名规则设置">⚙</button>
@@ -36,7 +36,7 @@
 
         <section class="view rules-view" id="rulesView">
           <div class="section-head">
-            <h2>命名规则 <span class="version-badge">V1.43</span></h2>
+            <h2>命名规则 <span class="version-badge">V1.44</span></h2>
             <p>这些设置会自动保存，并在命名流程中作为全局前缀使用。</p>
           </div>
 
@@ -273,14 +273,33 @@
 
           <div class="batch-tools list-batch-tools">
             <label>
+              <span>前缀名</span>
+              <select id="workBasePrefix">
+                <option value="T_UI">T_UI</option>
+                <option value="T_UI_Img">T_UI_Img</option>
+                <option value="T_UI_Icon">T_UI_Icon</option>
+              </select>
+            </label>
+            <label>
               <span>当前界面工程名</span>
               <input id="workProjectName" type="text" placeholder="请输入本套界面的工程名" />
+            </label>
+            <label>
+              <span>当前界面命名</span>
+              <input id="workViewName" type="text" placeholder="例如：Home" />
             </label>
             <div class="batch-field suffix-apply-field">
               <span>批量追加后缀</span>
               <div class="suffix-apply-group">
                 <input id="batchSuffix" type="text" placeholder="例如：Hover" />
                 <button id="applySuffix" class="ghost-action" type="button">应用到选中</button>
+              </div>
+            </div>
+            <div class="batch-field suffix-apply-field">
+              <span>批量添加序号</span>
+              <div class="suffix-apply-group">
+                <input id="batchSequenceStart" type="number" min="1" step="1" placeholder="01" />
+                <button id="applySequence" class="ghost-action" type="button">添加序号</button>
               </div>
             </div>
             <label>

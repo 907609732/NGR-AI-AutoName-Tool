@@ -828,11 +828,15 @@ button:disabled {
 
 .batch-tools {
   display: grid;
-  grid-template-columns: minmax(0, 220px) minmax(300px, 1.25fr) minmax(0, 160px) minmax(0, 160px) auto auto;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: 10px;
   align-items: end;
   padding-top: 18px;
   border-top: 1px solid var(--line);
+}
+
+.suffix-apply-field {
+  min-width: 280px;
 }
 
 .batch-field {
@@ -1078,7 +1082,7 @@ button:disabled {
 
 .inline-name-row {
   display: grid;
-  grid-template-columns: minmax(180px, 0.9fr) minmax(240px, 1.1fr);
+  grid-template-columns: minmax(150px, 0.7fr) minmax(150px, 0.7fr) minmax(240px, 1.4fr);
   gap: 8px;
   min-width: 0;
 }
@@ -1093,7 +1097,8 @@ button:disabled {
   background: var(--surface-2);
 }
 
-.inline-prefix input {
+.inline-prefix input,
+.inline-prefix select {
   height: 30px;
   min-width: 0;
 }
@@ -1263,7 +1268,7 @@ button:disabled {
 }
 
 .compact-list-mode .inline-name-row {
-  grid-template-columns: minmax(160px, 0.75fr) minmax(260px, 1.25fr);
+  grid-template-columns: minmax(130px, 0.65fr) minmax(130px, 0.65fr) minmax(240px, 1.4fr);
 }
 
 .compact-list-mode .inline-prefix,
