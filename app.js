@@ -1584,6 +1584,7 @@ async function fileToAsset(file) {
     customPrefix: "",
     customBasePrefix: "",
     customProjectName: "",
+    customViewName: "",
     lexiconOpen: false,
     namingStatus: "idle",
     statusMessage: "",
@@ -2015,6 +2016,21 @@ function renderAssetList() {
     });
     project.append(projectLabel, projectInput);
 
+    const view = document.createElement("label");
+    view.className = "inline-prefix";
+    const viewLabel = document.createElement("span");
+    viewLabel.textContent = "界面名";
+    const viewInput = document.createElement("input");
+    viewInput.type = "text";
+    viewInput.value = buildAssetViewName(asset);
+    viewInput.placeholder = rules.viewName || "可不填";
+    viewInput.addEventListener("input", () => {
+      asset.customPrefix = "";
+      asset.customViewName = sanitizeName(viewInput.value);
+      afterName.querySelector("strong").textContent = asset.finalBaseName ? buildExportName(asset) : "待命名";
+    });
+    view.append(viewLabel, viewInput);
+
     const recommendationWrap = document.createElement("div");
     recommendationWrap.className = "inline-recommendations";
     const recommendationLabel = document.createElement("span");
@@ -2119,7 +2135,7 @@ function renderAssetList() {
     lexiconContent.append(tabs, chips);
     lexiconWrap.append(lexiconSummary, lexiconContent);
 
-    nameRow.append(prefix, project, finalLabel);
+    nameRow.append(prefix, project, view, finalLabel);
     editor.append(nameRow);
     if (listDisplayMode !== "compact") editor.append(recommendationWrap, lexiconWrap);
     row.append(checkbox, img, text, editor);
@@ -2860,7 +2876,7 @@ function buildAssetPrefix(asset) {
   const parts = [
     buildAssetBasePrefix(asset),
     buildAssetProjectName(asset),
-    sanitizeName(rules.viewName),
+    buildAssetViewName(asset),
   ].filter(Boolean);
   return parts.join(separator) + separator;
 }
@@ -2872,6 +2888,10 @@ function buildAssetBasePrefix(asset) {
 
 function buildAssetProjectName(asset) {
   return sanitizeName(asset?.customProjectName || rules.projectName) || defaultRules.projectName;
+}
+
+function buildAssetViewName(asset) {
+  return sanitizeName(asset?.customViewName || rules.viewName);
 }
 
 function getExtension(name) {
