@@ -2828,29 +2828,50 @@ async function exportRenamedFiles() {
     try {
       const dir = await window.showDirectoryPicker({ mode: "readwrite" });
       for (const asset of assets) {
-        const fileHandle = await dir.getFileHandle(buildExportName(asset), { create: true });
+        const exportBlob = await buildWindowsPreviewPngBlob(asset);
+        const fileHandle = await dir.getFileHandle(buildExportName(asset, ".png"), { create: true });
         const writable = await fileHandle.createWritable();
-        await writable.write(asset.file);
+        await writable.write(exportBlob);
         await writable.close();
       }
-      showToast("导出完成，可在所选文件夹查看");
+      showToast("导出完成，已转为 Windows 预览兼容 PNG");
     } catch (error) {
       if (error.name !== "AbortError") showToast("导出失败，请检查浏览器文件夹权限");
     }
     return;
   }
 
-  assets.forEach((asset) => {
+  for (const asset of assets) {
+    const exportBlob = await buildWindowsPreviewPngBlob(asset);
     const link = document.createElement("a");
-    link.href = asset.url;
-    link.download = buildExportName(asset);
+    const exportUrl = URL.createObjectURL(exportBlob);
+    link.href = exportUrl;
+    link.download = buildExportName(asset, ".png");
     link.click();
-  });
-  showToast("浏览器不支持选择文件夹，已改为逐个下载");
+    setTimeout(() => URL.revokeObjectURL(exportUrl), 1000);
+  }
+  showToast("浏览器不支持选择文件夹，已改为逐个下载标准 PNG");
 }
 
-function buildExportName(asset) {
-  return buildAssetPrefix(asset) + formatNamingName(asset.finalBaseName) + asset.extension;
+async function buildWindowsPreviewPngBlob(asset) {
+  if (!isRasterImage(asset.file) && !/\.svg$/i.test(asset.file.name)) return asset.file;
+  const image = await loadImage(asset.url);
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.max(1, image.naturalWidth || asset.dimensions?.width || 1);
+  canvas.height = Math.max(1, image.naturalHeight || asset.dimensions?.height || 1);
+  const context = canvas.getContext("2d");
+  context.clearRect(0, 0, canvas.width, canvas.height);
+  context.drawImage(image, 0, 0, canvas.width, canvas.height);
+  return new Promise((resolve, reject) => {
+    canvas.toBlob((blob) => {
+      if (blob) resolve(blob);
+      else reject(new Error("PNG 转换失败"));
+    }, "image/png");
+  });
+}
+
+function buildExportName(asset, extensionOverride) {
+  return buildAssetPrefix(asset) + formatNamingName(asset.finalBaseName) + (extensionOverride || asset.extension);
 }
 
 function buildAssetPrefix(asset) {
