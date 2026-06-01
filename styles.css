@@ -828,7 +828,7 @@ button:disabled {
 
 .batch-tools {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
   gap: 10px;
   align-items: end;
   padding-top: 18px;
@@ -836,7 +836,8 @@ button:disabled {
 }
 
 .suffix-apply-field {
-  min-width: 280px;
+  grid-column: span 2;
+  min-width: 0;
 }
 
 .batch-field {
@@ -846,16 +847,19 @@ button:disabled {
 
 .suffix-apply-group {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(80px, 1fr) auto;
   align-items: stretch;
+  min-width: 0;
 }
 
 .suffix-apply-group input {
+  min-width: 0;
   border-radius: 8px 0 0 8px;
 }
 
 .suffix-apply-group .ghost-action {
-  min-width: 130px;
+  min-width: 96px;
+  padding: 0 10px;
   border-left: 0;
   border-radius: 0 8px 8px 0;
   background: #f8fbfc;
